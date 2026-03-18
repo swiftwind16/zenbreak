@@ -96,7 +96,7 @@ class AIMessageCache:
 
     def __init__(self):
         self._cache: dict[str, list[str]] = {}
-        self._generating = False
+        self._generating: set[str] = set()
         self._lock = threading.Lock()
 
     def get_message(self, ctx: ActivityContext) -> Optional[str]:
@@ -106,19 +106,21 @@ class AIMessageCache:
             if key in self._cache and self._cache[key]:
                 return self._cache[key].pop(0)
 
-        # Trigger background generation if not already running
-        if not self._generating:
-            self._generating = True
-            threading.Thread(
-                target=self._generate_batch,
-                args=(ctx,),
-                daemon=True,
-            ).start()
+        # Trigger background generation if not already generating for this area
+        with self._lock:
+            if key not in self._generating:
+                self._generating.add(key)
+                threading.Thread(
+                    target=self._generate_batch,
+                    args=(ctx,),
+                    daemon=True,
+                ).start()
 
         return None
 
     def _generate_batch(self, ctx: ActivityContext):
         """Generate a few messages in the background."""
+        key = ctx.body_area.value
         try:
             messages = []
             for _ in range(3):
@@ -127,7 +129,6 @@ class AIMessageCache:
                     messages.append(msg)
 
             if messages:
-                key = ctx.body_area.value
                 with self._lock:
                     if key not in self._cache:
                         self._cache[key] = []
@@ -136,4 +137,5 @@ class AIMessageCache:
         except Exception as e:
             logger.warning("[ai] Batch generation failed: %s", e)
         finally:
-            self._generating = False
+            with self._lock:
+                self._generating.discard(key)

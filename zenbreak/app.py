@@ -64,7 +64,29 @@ class ZenBreakApp(rumps.App):
 
     def run(self, **kwargs):
         self.activity.start()
+        self._prefill_ai_cache()
         super().run(**kwargs)
+
+    def _prefill_ai_cache(self):
+        """Pre-generate AI messages for all body areas on startup."""
+        import threading
+
+        def _generate():
+            for area in BodyArea:
+                ctx = ActivityContext(
+                    top_app="computer",
+                    app_category="other",
+                    duration_min=30,
+                    keyboard_intensity="medium",
+                    body_area=area,
+                    strain_pct=50.0,
+                    time_of_day="afternoon",
+                )
+                self.ai_cache.get_message(ctx)
+                import time
+                time.sleep(1)  # don't hammer Ollama
+
+        threading.Thread(target=_generate, daemon=True).start()
 
     @rumps.timer(5)
     def tick(self, _):
