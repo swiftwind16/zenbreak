@@ -52,7 +52,7 @@ class ZenBreakApp(rumps.App):
             None,
             self.stats_item,
             None,
-            rumps.MenuItem("Take a break now", callback=lambda _: self._trigger_break_now()),
+            self._build_break_menu(),
             None,
             rumps.MenuItem("Pause 15 min", callback=lambda _: self.pause(15)),
             rumps.MenuItem("Pause 30 min", callback=lambda _: self.pause(30)),
@@ -234,6 +234,35 @@ class ZenBreakApp(rumps.App):
             self.next_break_item.title = f"Next break: {top_area.value} at 30% (now {top_strain:.0f}%)"
         else:
             self.next_break_item.title = "Next break: All good!"
+
+    def _build_break_menu(self):
+        """Build 'Take a break' submenu with all body areas."""
+        menu = rumps.MenuItem("Take a break now")
+        menu.add(rumps.MenuItem("Auto (most strained)", callback=lambda _: self._trigger_break_now()))
+        menu.add(None)  # separator
+        for area in BodyArea:
+            menu.add(rumps.MenuItem(
+                area.value.capitalize(),
+                callback=lambda _, a=area: self._trigger_break_for(a),
+            ))
+        return menu
+
+    def _trigger_break_for(self, area: BodyArea):
+        """Trigger a break for a specific body area."""
+        exercise = self.exercises.get_exercise(area)
+        self.breaks_total += 1
+        summary = self._get_activity_context(area)
+        if self.overlay.is_visible:
+            self.overlay.dismiss()
+        self.overlay.show(
+            title=exercise.name.upper(),
+            steps=exercise.steps,
+            context_line=summary,
+            duration_sec=exercise.duration_sec,
+            dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
+            on_dismiss=self._on_break_taken,
+        )
+        self.title = "🛑 BREAK"
 
     def _trigger_break_now(self):
         """Manually trigger a break for the most strained body area."""
