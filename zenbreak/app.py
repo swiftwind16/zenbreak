@@ -10,6 +10,7 @@ from zenbreak.exercises import ExerciseLibrary
 from zenbreak.overlay import OverlayManager
 from zenbreak.sound import play_chime
 from zenbreak.idle import get_idle_seconds
+from zenbreak.ai import AIMessageCache, ActivityContext
 
 
 class ZenBreakApp(rumps.App):
@@ -28,6 +29,7 @@ class ZenBreakApp(rumps.App):
         )
         self.exercises = ExerciseLibrary()
         self.overlay = OverlayManager.alloc().init()
+        self.ai_cache = AIMessageCache()
 
         # State
         self._idle_paused = False
@@ -251,17 +253,44 @@ class ZenBreakApp(rumps.App):
         """Trigger a break for a specific body area."""
         exercise = self.exercises.get_exercise(area)
         self.breaks_total += 1
+        context_line = self._get_ai_context(area) or ""
         if self.overlay.is_visible:
             self.overlay.dismiss()
         self.overlay.show(
             title=exercise.name.upper(),
             steps=exercise.steps,
-            context_line="",
+            context_line=context_line,
             duration_sec=exercise.duration_sec,
             dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
             on_dismiss=self._on_break_taken,
         )
         self.title = "🛑 BREAK"
+
+    def _get_ai_context(self, area: BodyArea) -> str | None:
+        """Get AI-generated context message for this break."""
+        summary = self.activity.get_session_summary()
+        top = summary[0] if summary else None
+
+        now = datetime.now().hour
+        if now < 12:
+            time_of_day = "morning"
+        elif now < 17:
+            time_of_day = "afternoon"
+        elif now < 21:
+            time_of_day = "evening"
+        else:
+            time_of_day = "late night"
+
+        ctx = ActivityContext(
+            top_app=top.app_name if top else "computer",
+            app_category=top.category if top else "other",
+            duration_min=int(top.total_duration_seconds / 60) if top else 0,
+            keyboard_intensity=top.avg_keyboard_intensity if top else "low",
+            body_area=area,
+            strain_pct=self.strain.get_strain().get(area, 0),
+            time_of_day=time_of_day,
+        )
+        return self.ai_cache.get_message(ctx)
 
     def _trigger_break_now(self):
         """Manually trigger a break for the most strained body area."""
