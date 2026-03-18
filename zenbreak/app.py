@@ -52,6 +52,8 @@ class ZenBreakApp(rumps.App):
             None,
             self.stats_item,
             None,
+            rumps.MenuItem("Take a break now", callback=lambda _: self._trigger_break_now()),
+            None,
             rumps.MenuItem("Pause 15 min", callback=lambda _: self.pause(15)),
             rumps.MenuItem("Pause 30 min", callback=lambda _: self.pause(30)),
             rumps.MenuItem("Pause 1 hour", callback=lambda _: self.pause(60)),
@@ -211,9 +213,9 @@ class ZenBreakApp(rumps.App):
         top_areas = sorted(BodyArea, key=lambda a: strain[a], reverse=True)[:3]
 
         def _level_icon(pct: float) -> str:
-            if pct >= 50:
+            if pct >= 30:
                 return "!!"
-            elif pct >= 30:
+            elif pct >= 20:
                 return "!"
             return ""
 
@@ -225,13 +227,31 @@ class ZenBreakApp(rumps.App):
         self.strain_item.title = f"Strain: {' | '.join(parts)}"
 
         top_area, top_strain = self.strain.get_priority_reminder()
-        if top_strain >= 50:
+        if top_strain >= 30:
             self.next_break_item.title = f"Break needed: {top_area.value} ({top_strain:.0f}%)"
         elif top_strain > 0:
             remaining = 50.0 - top_strain
-            self.next_break_item.title = f"Next break: {top_area.value} at 50% (now {top_strain:.0f}%)"
+            self.next_break_item.title = f"Next break: {top_area.value} at 30% (now {top_strain:.0f}%)"
         else:
             self.next_break_item.title = "Next break: All good!"
+
+    def _trigger_break_now(self):
+        """Manually trigger a break for the most strained body area."""
+        area, _ = self.strain.get_priority_reminder()
+        exercise = self.exercises.get_exercise(area)
+        self.breaks_total += 1
+        summary = self._get_activity_context(area)
+        if self.overlay.is_visible:
+            self.overlay.dismiss()
+        self.overlay.show(
+            title=exercise.name.upper(),
+            steps=exercise.steps,
+            context_line=summary,
+            duration_sec=exercise.duration_sec,
+            dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
+            on_dismiss=self._on_break_taken,
+        )
+        self.title = "🛑 BREAK"
 
     def _in_work_hours(self) -> bool:
         """Check if current time is within configured work hours."""
