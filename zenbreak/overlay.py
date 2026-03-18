@@ -133,7 +133,7 @@ class OverlayManager:
         dismiss_button.setTitle_(f"I did it ({duration_sec}s)")
         dismiss_button.setBezelStyle_(1)
         dismiss_button.setFont_(NSFont.boldSystemFontOfSize_(18.0))
-        dismiss_button.setEnabled_(False)  # greyed out, but visible
+        dismiss_button.setEnabled_(True)
         dismiss_button.setTarget_(self)
         dismiss_button.setAction_(
             objc.selector(self._on_dismiss_clicked_, signature=b"v@:@")
@@ -265,10 +265,7 @@ class OverlayManager:
             objc.selector(dismiss_button.setTitle_, signature=b"v@:@"),
             "I did it", False,
         )
-        dismiss_button.performSelectorOnMainThread_withObject_waitUntilDone_(
-            objc.selector(dismiss_button.setEnabled_, signature=b"v@:c"),
-            True, False,
-        )
+        # Button is already enabled — just update the title
 
     @staticmethod
     def _make_label(text, font, color, frame):
