@@ -18,24 +18,35 @@ APP_CATEGORIES: Dict[str, str] = {
     "com.googlecode.iterm2": "terminal",
     "dev.warp.Warp-Stable": "terminal",
     # IDEs
+    "com.todesktop.230313mzl4w4u92": "ide",  # Cursor
     "com.microsoft.VSCode": "ide",
     "com.jetbrains.intellij": "ide",
+    "com.jetbrains.pycharm": "ide",
     "com.apple.dt.Xcode": "ide",
     "com.sublimetext.4": "ide",
     # Browsers
     "com.apple.Safari": "browser",
     "com.google.Chrome": "browser",
     "org.mozilla.firefox": "browser",
+    "com.brave.Browser": "browser",
     "company.thebrowser.Browser": "browser",
     # Video calls
     "us.zoom.xos": "video_call",
     "com.microsoft.teams2": "video_call",
     "com.google.meet": "video_call",
+    "com.apple.FaceTime": "video_call",
     # Messaging
     "com.apple.MobileSMS": "messaging",
     "com.tinyspeck.slackmacgap": "messaging",
     "ru.keepcoder.Telegram": "messaging",
+    "com.hnc.Discord": "messaging",
+    "com.tencent.xinWeChat": "messaging",  # WeChat
+    "com.tencent.WeWorkMac": "messaging",  # WeCom
     "com.facebook.archon": "messaging",
+    # Reading/writing
+    "notion.id": "browser",  # Notion — similar to browser usage
+    "com.apple.Notes": "browser",
+    "com.openai.chat": "browser",  # ChatGPT desktop
 }
 
 
