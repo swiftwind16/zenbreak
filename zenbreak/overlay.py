@@ -115,19 +115,19 @@ class OverlayManager:
             ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(ctx_label)
 
-        # Countdown label
-        countdown_label = self._make_label(
-            f"Dismiss available in {dismiss_countdown}s",
-            NSFont.systemFontOfSize_(16.0),
-            NSColor.colorWithCalibratedRed_green_blue_alpha_(1, 1, 1, 0.5),
-            NSMakeRect(center_x - 200, h * 0.18, 400, 30),
+        # Exercise timer label (large, prominent)
+        timer_label = self._make_label(
+            f"Do this for {duration_sec}s",
+            NSFont.boldSystemFontOfSize_(24.0),
+            NSColor.colorWithCalibratedRed_green_blue_alpha_(1, 1, 1, 0.9),
+            NSMakeRect(center_x - 200, h * 0.22, 400, 35),
         )
-        countdown_label.setAlignment_(NSCenterTextAlignment)
-        content_view.addSubview_(countdown_label)
+        timer_label.setAlignment_(NSCenterTextAlignment)
+        content_view.addSubview_(timer_label)
 
         # "I did it" button (hidden initially)
         dismiss_button = NSButton.alloc().initWithFrame_(
-            NSMakeRect(center_x - 80, h * 0.12, 160, 44)
+            NSMakeRect(center_x - 80, h * 0.14, 160, 44)
         )
         dismiss_button.setTitle_("I did it")
         dismiss_button.setBezelStyle_(1)
@@ -141,10 +141,10 @@ class OverlayManager:
 
         self._window.makeKeyAndOrderFront_(None)
 
-        # Start countdown
+        # Start exercise timer, then show dismiss button
         threading.Thread(
-            target=self._run_countdown,
-            args=(dismiss_countdown, countdown_label, dismiss_button),
+            target=self._run_exercise_timer,
+            args=(duration_sec, timer_label, dismiss_button),
             daemon=True,
         ).start()
 
@@ -200,13 +200,18 @@ class OverlayManager:
     )
 
     @objc.python_method
-    def _run_countdown(self, seconds, countdown_label, dismiss_button):
-        for remaining in range(seconds, 0, -1):
+    def _run_exercise_timer(self, duration_sec, timer_label, dismiss_button):
+        """Count down the exercise duration, then show dismiss button."""
+        for remaining in range(duration_sec, 0, -1):
             if self._dismiss_requested:
                 return
-            text = f"Dismiss available in {remaining}s"
-            countdown_label.performSelectorOnMainThread_withObject_waitUntilDone_(
-                objc.selector(countdown_label.setStringValue_, signature=b"v@:@"),
+            mins, secs = divmod(remaining, 60)
+            if mins > 0:
+                text = f"Do this for {mins}m {secs:02d}s"
+            else:
+                text = f"Do this for {secs}s"
+            timer_label.performSelectorOnMainThread_withObject_waitUntilDone_(
+                objc.selector(timer_label.setStringValue_, signature=b"v@:@"),
                 text, False,
             )
             time.sleep(1)
@@ -214,9 +219,10 @@ class OverlayManager:
         if self._dismiss_requested:
             return
 
-        countdown_label.performSelectorOnMainThread_withObject_waitUntilDone_(
-            objc.selector(countdown_label.setStringValue_, signature=b"v@:@"),
-            "", False,
+        # Exercise time complete — show dismiss
+        timer_label.performSelectorOnMainThread_withObject_waitUntilDone_(
+            objc.selector(timer_label.setStringValue_, signature=b"v@:@"),
+            "Done! Great job.", False,
         )
         dismiss_button.performSelectorOnMainThread_withObject_waitUntilDone_(
             objc.selector(dismiss_button.setHidden_, signature=b"v@:c"),
