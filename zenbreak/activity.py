@@ -197,8 +197,8 @@ class ActivityMonitor:
             from Quartz import (
                 CGEventSourceCounterForEventType,
                 kCGEventSourceStateHIDSystemState,
-                kCGEventSourceCounterTypeKey,
-                kCGEventSourceCounterTypeMouse,
+                kCGEventKeyDown,
+                kCGEventLeftMouseDown,
             )
         except ImportError:
             logger.debug("[activity-monitor] macOS frameworks not available")
@@ -214,10 +214,10 @@ class ActivityMonitor:
 
         now = time.time()
         kb_count = CGEventSourceCounterForEventType(
-            kCGEventSourceStateHIDSystemState, kCGEventSourceCounterTypeKey
+            kCGEventSourceStateHIDSystemState, kCGEventKeyDown
         )
         mouse_count = CGEventSourceCounterForEventType(
-            kCGEventSourceStateHIDSystemState, kCGEventSourceCounterTypeMouse
+            kCGEventSourceStateHIDSystemState, kCGEventLeftMouseDown
         )
 
         kb_epm = 0.0
