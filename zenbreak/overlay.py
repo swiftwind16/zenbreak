@@ -192,7 +192,6 @@ class OverlayManager:
             except Exception as e:
                 logger.warning("[overlay] on_dismiss callback failed: %s", e)
 
-    @objc.python_method
     def _on_dismiss_clicked_(self, sender):
         self.dismiss()
 

@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 
 from zenbreak.config import load_config
-from zenbreak.activity import ActivityMonitor, APP_CATEGORIES
+from zenbreak.activity import ActivityMonitor, APP_CATEGORIES, AppSessionSummary
 from zenbreak.strain import StrainTracker, BodyArea
 from zenbreak.timers import ReminderEngine, EscalationLevel
 from zenbreak.exercises import ExerciseLibrary
@@ -18,7 +18,7 @@ class ZenBreakApp(rumps.App):
         self.config = load_config()
 
         # Core components
-        self.activity = ActivityMonitor(poll_interval_sec=5)
+        self.activity = ActivityMonitor()
         self.strain = StrainTracker()
         self.engine = ReminderEngine(
             strain_threshold=50.0,
@@ -187,17 +187,19 @@ class ZenBreakApp(rumps.App):
 
     def _get_activity_context(self, area: BodyArea) -> str:
         """Generate a context line about current activity."""
-        summary = self.activity.get_session_summary(last_n_minutes=60)
+        summary = self.activity.get_session_summary()
         if not summary:
             return f"Your {area.value} need attention."
         top = summary[0]
-        duration = int(top["duration_min"])
-        return f"{duration}min of {top['app_name']} — your {area.value} need this."
+        duration = int(top.total_duration_seconds / 60)
+        return f"{duration}min of {top.app_name} — your {area.value} need this."
 
     def _update_menu_info(self):
         """Update menu bar items with current status."""
-        app_name, category = self.activity.get_current_app()
-        self.current_activity_item.title = f"Current: {app_name} ({category})"
+        latest = self.activity.latest
+        if latest:
+            category = APP_CATEGORIES.get(latest.bundle_id, "other")
+            self.current_activity_item.title = f"Current: {latest.app_name} ({category})"
 
         strain = self.strain.get_strain()
         top_areas = sorted(BodyArea, key=lambda a: strain[a], reverse=True)[:3]
