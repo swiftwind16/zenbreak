@@ -38,11 +38,12 @@ class ZenBreakApp(rumps.App):
         self.breaks_taken = 0
         self.breaks_total = 0
 
-        # Build menu
-        self.current_activity_item = rumps.MenuItem("Current: Starting up...")
-        self.strain_item = rumps.MenuItem("Strain: Calculating...")
-        self.next_break_item = rumps.MenuItem("Next break: Calculating...")
-        self.stats_item = rumps.MenuItem("Today: 0 breaks taken")
+        # Build menu — use no-op callback so items aren't greyed out
+        _noop = lambda _: None
+        self.current_activity_item = rumps.MenuItem("Current: Starting up...", callback=_noop)
+        self.strain_item = rumps.MenuItem("Strain: Calculating...", callback=_noop)
+        self.next_break_item = rumps.MenuItem("Next break: Calculating...", callback=_noop)
+        self.stats_item = rumps.MenuItem("Today: 0 breaks taken", callback=_noop)
 
         self.menu = [
             self.current_activity_item,
