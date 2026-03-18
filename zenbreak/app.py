@@ -267,11 +267,6 @@ class ZenBreakApp(rumps.App):
         """Manually trigger a break for the most strained body area."""
         area, _ = self.strain.get_priority_reminder()
         self._trigger_break_for(area)
-            duration_sec=exercise.duration_sec,
-            dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
-            on_dismiss=self._on_break_taken,
-        )
-        self.title = "🛑 BREAK"
 
     def _in_work_hours(self) -> bool:
         """Check if current time is within configured work hours."""
