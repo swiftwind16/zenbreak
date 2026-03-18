@@ -5,6 +5,7 @@ import threading
 import time
 
 import objc
+from Foundation import NSObject
 from AppKit import (
     NSBackingStoreBuffered,
     NSBezierPath,
@@ -36,19 +37,26 @@ class GradientView(NSView):
         gradient.drawInBezierPath_angle_(path, 270.0)
 
 
-class OverlayManager:
+class OverlayManager(NSObject):
     """Manages full-screen overlay windows for exercise reminders."""
 
-    def __init__(self):
+    def init(self):
+        self = objc.super(OverlayManager, self).init()
+        if self is None:
+            return None
         self._window = None
         self._on_dismiss = None
         self._dismiss_requested = False
         self._event_monitor = None
+        return self
 
-    @property
-    def is_visible(self):
+    @objc.python_method
+    def get_is_visible(self):
         return self._window is not None
 
+    is_visible = property(lambda self: self.get_is_visible())
+
+    @objc.python_method
     def show(
         self,
         title: str,
@@ -135,9 +143,7 @@ class OverlayManager:
         dismiss_button.setFont_(NSFont.boldSystemFontOfSize_(18.0))
         dismiss_button.setEnabled_(True)
         dismiss_button.setTarget_(self)
-        dismiss_button.setAction_(
-            objc.selector(self._on_dismiss_clicked_, signature=b"v@:@")
-        )
+        dismiss_button.setAction_(b"dismissClicked:")
         content_view.addSubview_(dismiss_button)
 
         # Emergency exit hint
@@ -162,6 +168,7 @@ class OverlayManager:
             daemon=True,
         ).start()
 
+    @objc.python_method
     def show_semi_transparent(self, message: str, opacity: float = 0.5):
         """Show a semi-transparent overlay with just a message."""
         screen = NSScreen.mainScreen()
@@ -194,6 +201,7 @@ class OverlayManager:
 
         self._window.makeKeyAndOrderFront_(None)
 
+    @objc.python_method
     def dismiss(self):
         """Hide the overlay and invoke callback."""
         self._dismiss_requested = True
@@ -210,13 +218,11 @@ class OverlayManager:
             except Exception as e:
                 logger.warning("[overlay] on_dismiss callback failed: %s", e)
 
-    def _on_dismiss_clicked_(self, sender):
+    @objc.IBAction
+    def dismissClicked_(self, sender):
         self.dismiss()
 
-    _on_dismiss_clicked_ = objc.selector(
-        _on_dismiss_clicked_, signature=b"v@:@"
-    )
-
+    @objc.python_method
     def _setup_escape_key(self):
         """Add Escape key listener to dismiss the overlay."""
         from AppKit import NSEvent, NSKeyDownMask
@@ -230,6 +236,7 @@ class OverlayManager:
             NSKeyDownMask, handler
         )
 
+    @objc.python_method
     @objc.python_method
     def _run_exercise_timer(self, duration_sec, timer_label, dismiss_button):
         """Count down the exercise duration, then enable dismiss button."""

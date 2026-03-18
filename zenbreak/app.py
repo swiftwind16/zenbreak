@@ -27,7 +27,7 @@ class ZenBreakApp(rumps.App):
             level_4_delay=self.config["escalation"]["level_4_delay_sec"],
         )
         self.exercises = ExerciseLibrary()
-        self.overlay = OverlayManager()
+        self.overlay = OverlayManager.alloc().init()
 
         # State
         self._idle_paused = False
