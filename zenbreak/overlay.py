@@ -43,6 +43,7 @@ class OverlayManager:
         self._window = None
         self._on_dismiss = None
         self._dismiss_requested = False
+        self._event_monitor = None
 
     @property
     def is_visible(self):
@@ -125,23 +126,36 @@ class OverlayManager:
         timer_label.setAlignment_(NSCenterTextAlignment)
         content_view.addSubview_(timer_label)
 
-        # "I did it" button (hidden initially)
+        # "I did it" button — always visible, disabled during countdown
         dismiss_button = NSButton.alloc().initWithFrame_(
             NSMakeRect(center_x - 80, h * 0.14, 160, 44)
         )
-        dismiss_button.setTitle_("I did it")
+        dismiss_button.setTitle_(f"I did it ({duration_sec}s)")
         dismiss_button.setBezelStyle_(1)
         dismiss_button.setFont_(NSFont.boldSystemFontOfSize_(18.0))
-        dismiss_button.setHidden_(True)
+        dismiss_button.setEnabled_(False)  # greyed out, but visible
         dismiss_button.setTarget_(self)
         dismiss_button.setAction_(
             objc.selector(self._on_dismiss_clicked_, signature=b"v@:@")
         )
         content_view.addSubview_(dismiss_button)
 
+        # Emergency exit hint
+        escape_hint = self._make_label(
+            "Press Esc to dismiss early",
+            NSFont.systemFontOfSize_(12.0),
+            NSColor.colorWithCalibratedRed_green_blue_alpha_(1, 1, 1, 0.3),
+            NSMakeRect(center_x - 150, h * 0.08, 300, 20),
+        )
+        escape_hint.setAlignment_(NSCenterTextAlignment)
+        content_view.addSubview_(escape_hint)
+
         self._window.makeKeyAndOrderFront_(None)
 
-        # Start exercise timer, then show dismiss button
+        # Listen for Escape key
+        self._setup_escape_key()
+
+        # Start exercise timer, then enable dismiss button
         threading.Thread(
             target=self._run_exercise_timer,
             args=(duration_sec, timer_label, dismiss_button),
@@ -183,6 +197,10 @@ class OverlayManager:
     def dismiss(self):
         """Hide the overlay and invoke callback."""
         self._dismiss_requested = True
+        if self._event_monitor is not None:
+            from AppKit import NSEvent
+            NSEvent.removeMonitor_(self._event_monitor)
+            self._event_monitor = None
         if self._window is not None:
             self._window.orderOut_(None)
             self._window = None
@@ -199,9 +217,22 @@ class OverlayManager:
         _on_dismiss_clicked_, signature=b"v@:@"
     )
 
+    def _setup_escape_key(self):
+        """Add Escape key listener to dismiss the overlay."""
+        from AppKit import NSEvent, NSKeyDownMask
+
+        def handler(event):
+            if event.keyCode() == 53:  # Escape key
+                self.dismiss()
+            return event
+
+        self._event_monitor = NSEvent.addLocalMonitorForEventsMatchingMask_handler_(
+            NSKeyDownMask, handler
+        )
+
     @objc.python_method
     def _run_exercise_timer(self, duration_sec, timer_label, dismiss_button):
-        """Count down the exercise duration, then show dismiss button."""
+        """Count down the exercise duration, then enable dismiss button."""
         for remaining in range(duration_sec, 0, -1):
             if self._dismiss_requested:
                 return
@@ -214,19 +245,29 @@ class OverlayManager:
                 objc.selector(timer_label.setStringValue_, signature=b"v@:@"),
                 text, False,
             )
+            # Update button text with remaining time
+            btn_text = f"I did it ({remaining}s)"
+            dismiss_button.performSelectorOnMainThread_withObject_waitUntilDone_(
+                objc.selector(dismiss_button.setTitle_, signature=b"v@:@"),
+                btn_text, False,
+            )
             time.sleep(1)
 
         if self._dismiss_requested:
             return
 
-        # Exercise time complete — show dismiss
+        # Exercise complete — enable button
         timer_label.performSelectorOnMainThread_withObject_waitUntilDone_(
             objc.selector(timer_label.setStringValue_, signature=b"v@:@"),
             "Done! Great job.", False,
         )
         dismiss_button.performSelectorOnMainThread_withObject_waitUntilDone_(
-            objc.selector(dismiss_button.setHidden_, signature=b"v@:c"),
-            False, False,
+            objc.selector(dismiss_button.setTitle_, signature=b"v@:@"),
+            "I did it", False,
+        )
+        dismiss_button.performSelectorOnMainThread_withObject_waitUntilDone_(
+            objc.selector(dismiss_button.setEnabled_, signature=b"v@:c"),
+            True, False,
         )
 
     @staticmethod
