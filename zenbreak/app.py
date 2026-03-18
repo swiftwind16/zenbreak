@@ -209,17 +209,27 @@ class ZenBreakApp(rumps.App):
 
         strain = self.strain.get_strain()
         top_areas = sorted(BodyArea, key=lambda a: strain[a], reverse=True)[:3]
-        bars = " | ".join(
-            f"{a.value}: {self.strain.get_strain_bar(a, 5)}"
-            for a in top_areas
-        )
-        self.strain_item.title = f"Strain: {bars}"
+
+        def _level_icon(pct: float) -> str:
+            if pct >= 50:
+                return "!!"
+            elif pct >= 30:
+                return "!"
+            return ""
+
+        parts = []
+        for a in top_areas:
+            pct = strain[a]
+            icon = _level_icon(pct)
+            parts.append(f"{a.value} {pct:.0f}%{icon}")
+        self.strain_item.title = f"Strain: {' | '.join(parts)}"
 
         top_area, top_strain = self.strain.get_priority_reminder()
-        if top_strain > 0:
-            self.next_break_item.title = (
-                f"Next: {top_area.value} ({top_strain:.0f}% strain)"
-            )
+        if top_strain >= 50:
+            self.next_break_item.title = f"Break needed: {top_area.value} ({top_strain:.0f}%)"
+        elif top_strain > 0:
+            remaining = 50.0 - top_strain
+            self.next_break_item.title = f"Next break: {top_area.value} at 50% (now {top_strain:.0f}%)"
         else:
             self.next_break_item.title = "Next break: All good!"
 
