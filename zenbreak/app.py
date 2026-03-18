@@ -251,13 +251,12 @@ class ZenBreakApp(rumps.App):
         """Trigger a break for a specific body area."""
         exercise = self.exercises.get_exercise(area)
         self.breaks_total += 1
-        summary = self._get_activity_context(area)
         if self.overlay.is_visible:
             self.overlay.dismiss()
         self.overlay.show(
             title=exercise.name.upper(),
             steps=exercise.steps,
-            context_line=summary,
+            context_line="",
             duration_sec=exercise.duration_sec,
             dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
             on_dismiss=self._on_break_taken,
@@ -267,15 +266,7 @@ class ZenBreakApp(rumps.App):
     def _trigger_break_now(self):
         """Manually trigger a break for the most strained body area."""
         area, _ = self.strain.get_priority_reminder()
-        exercise = self.exercises.get_exercise(area)
-        self.breaks_total += 1
-        summary = self._get_activity_context(area)
-        if self.overlay.is_visible:
-            self.overlay.dismiss()
-        self.overlay.show(
-            title=exercise.name.upper(),
-            steps=exercise.steps,
-            context_line=summary,
+        self._trigger_break_for(area)
             duration_sec=exercise.duration_sec,
             dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
             on_dismiss=self._on_break_taken,
