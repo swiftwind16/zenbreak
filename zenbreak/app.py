@@ -196,10 +196,15 @@ class ZenBreakApp(rumps.App):
 
     def _update_menu_info(self):
         """Update menu bar items with current status."""
-        latest = self.activity.latest
-        if latest:
-            category = APP_CATEGORIES.get(latest.bundle_id, "other")
-            self.current_activity_item.title = f"Current: {latest.app_name} ({category})"
+        try:
+            latest = self.activity.latest
+            if latest:
+                category = APP_CATEGORIES.get(latest.bundle_id, "other")
+                self.current_activity_item.title = f"Current: {latest.app_name} ({category})"
+            else:
+                self.current_activity_item.title = "Current: Waiting for data..."
+        except Exception:
+            self.current_activity_item.title = "Current: Monitoring..."
 
         strain = self.strain.get_strain()
         top_areas = sorted(BodyArea, key=lambda a: strain[a], reverse=True)[:3]
