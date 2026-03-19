@@ -191,7 +191,7 @@ class ZenBreakApp(rumps.App):
                 if top_strain > 2:
                     remaining_pct = max(0, threshold - top_strain)
                     est_min = max(1, int(remaining_pct / 1.7))
-                    self.title = f"{est_min}m"
+                    self.title = f"{top_area.value} {est_min}m"
                 else:
                     self.title = ""
             return
