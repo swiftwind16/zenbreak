@@ -6,7 +6,7 @@ from zenbreak.config import load_config
 
 def test_load_config_returns_defaults_when_no_user_config():
     config = load_config(user_config_path="/nonexistent/path.json")
-    assert config["idle_threshold_sec"] == 120
+    assert config["idle_threshold_sec"] == 300
     assert config["reminders"]["eyes"]["interval_min"] == 20
 
 

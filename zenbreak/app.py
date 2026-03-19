@@ -125,14 +125,12 @@ class ZenBreakApp(rumps.App):
         # Returning from idle
         if self._idle_paused:
             self._idle_paused = False
-            grace = self.config["return_grace_min"] * 60
-            self._return_grace_until = now + grace
-            self.strain.record_full_break(int(idle_sec * 0.5))
+            self._return_grace_until = now + 60  # 1 min grace
+            self.strain.record_full_break(int(idle_sec * 0.3))
 
         # Grace period after returning
         if now < self._return_grace_until:
-            remaining = int(self._return_grace_until - now)
-            self.title = f"{remaining // 60}m grace"
+            self.title = ""
             return
 
         # Meeting detection — suppress reminders when in video call
@@ -171,11 +169,13 @@ class ZenBreakApp(rumps.App):
         if reminder is None:
             self._last_level = None
             top_area, top_strain = self.strain.get_priority_reminder()
-            if top_strain > 2 and self.activity.history:
-                threshold = self.engine.strain_threshold
-                rate = max(0.05, top_strain / max(1, len(self.activity.history)))
+            threshold = self.engine.strain_threshold
+            if top_strain >= threshold:
+                self.title = "!"
+            elif top_strain > 2:
+                # Simple estimate: strain rate is ~1.7%/min for IDE use
                 remaining_pct = threshold - top_strain
-                est_min = max(1, int(remaining_pct / rate / 12))
+                est_min = max(1, int(remaining_pct / 1.7))
                 self.title = f"{est_min}m"
             else:
                 self.title = ""
@@ -262,10 +262,9 @@ class ZenBreakApp(rumps.App):
 
         if top_strain >= threshold:
             self.next_break_item.title = "Time for a break"
-        elif top_strain > 2 and self.activity.history:
-            rate = max(0.05, top_strain / max(1, len(self.activity.history)))
+        elif top_strain > 2:
             remaining_pct = threshold - top_strain
-            est_min = max(1, int(remaining_pct / rate / 12))
+            est_min = max(1, int(remaining_pct / 1.7))
             self.next_break_item.title = f"Next break in {est_min} min"
         else:
             self.next_break_item.title = "Next break in ~30 min"

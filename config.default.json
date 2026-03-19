@@ -1,7 +1,10 @@
 {
-  "work_hours": { "start": "09:00", "end": "01:00" },
-  "idle_threshold_sec": 120,
-  "return_grace_min": 5,
+  "work_hours": {
+    "start": "09:00",
+    "end": "01:00"
+  },
+  "idle_threshold_sec": 300,
+  "return_grace_min": 1,
   "typing_pause_sec": 5,
   "escalation": {
     "level_2_delay_sec": 30,
@@ -10,11 +13,29 @@
     "dismiss_countdown_sec": 10
   },
   "reminders": {
-    "eyes":    { "interval_min": 20, "duration_sec": 20 },
-    "posture": { "interval_min": 30, "duration_sec": 10 },
-    "water":   { "interval_min": 45, "duration_sec": 5 },
-    "wrists":  { "interval_min": 40, "duration_sec": 30 },
-    "stretch": { "interval_min": 60, "duration_sec": 180 },
-    "walk":    { "interval_min": 90, "duration_sec": 300 }
+    "eyes": {
+      "interval_min": 20,
+      "duration_sec": 20
+    },
+    "posture": {
+      "interval_min": 30,
+      "duration_sec": 10
+    },
+    "water": {
+      "interval_min": 45,
+      "duration_sec": 5
+    },
+    "wrists": {
+      "interval_min": 40,
+      "duration_sec": 30
+    },
+    "stretch": {
+      "interval_min": 60,
+      "duration_sec": 180
+    },
+    "walk": {
+      "interval_min": 90,
+      "duration_sec": 300
+    }
   }
 }
