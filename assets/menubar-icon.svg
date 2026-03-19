@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 44 44" width="44" height="44">
+  <!-- Menu bar icon — just the stretching Z, no circle, tight viewBox -->
+
+  <!-- Head -->
+  <circle cx="18" cy="6" r="4" fill="#6C63FF"/>
+  <!-- Top bar -->
+  <path d="M5 13 L33 13" stroke="#6C63FF" stroke-width="5" stroke-linecap="round"/>
+  <!-- Diagonal -->
+  <path d="M30 13 L8 38" stroke="#6C63FF" stroke-width="5" stroke-linecap="round"/>
+  <!-- Bottom bar -->
+  <path d="M5 38 L33 38" stroke="#6C63FF" stroke-width="5" stroke-linecap="round"/>
+</svg>
