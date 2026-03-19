@@ -33,10 +33,19 @@ class ZenBreakApp(rumps.App):
         self.ai_cache = AIMessageCache()
         self.stats = StatsTracker()
 
+        # Video call apps — suppress reminders when frontmost
+        self._video_call_bundles = {
+            "us.zoom.xos", "com.microsoft.teams2", "com.google.meet",
+            "com.apple.FaceTime", "com.webex.meetingmanager",
+            "com.tencent.xinWeChat",   # WeChat (calls & video)
+            "com.tencent.WeWorkMac",   # WeCom (meetings)
+        }
+
         # State
         self._idle_paused = False
         self._return_grace_until = 0.0
         self._last_level = None
+        self._in_meeting = False
 
         # Build menu — use no-op callback so items aren't greyed out
         _noop = lambda _: None
@@ -120,10 +129,31 @@ class ZenBreakApp(rumps.App):
             self.title = f"🧘 {remaining // 60}m grace"
             return
 
+        # Meeting detection — suppress reminders when in video call
+        latest = self.activity.latest
+        if latest and latest.bundle_id in self._video_call_bundles:
+            if not self._in_meeting:
+                self._in_meeting = True
+                self.title = "🧘 meeting"
+                if self.overlay.is_visible:
+                    self.overlay.dismiss()
+            return
+        elif self._in_meeting:
+            # Just left a meeting — grace period + queue a break
+            self._in_meeting = False
+            self._return_grace_until = now + 300  # 5 min grace after meeting
+
         # Feed latest activity snapshot into strain model
         if self.activity.history:
-            latest = self.activity.history[-1]
-            self.strain.update(latest)
+            snapshot = self.activity.history[-1]
+            self.strain.update(snapshot)
+
+        # Late night mode — lower threshold after 10pm
+        current_hour = datetime.now().hour
+        if current_hour >= 22 or current_hour < 2:
+            self.engine.strain_threshold = 30.0  # more aggressive
+        else:
+            self.engine.strain_threshold = 50.0
 
         # Update menu bar info
         self._update_menu_info()
@@ -234,10 +264,13 @@ class ZenBreakApp(rumps.App):
         strain = self.strain.get_strain()
         top_areas = sorted(BodyArea, key=lambda a: strain[a], reverse=True)[:3]
 
+        threshold = self.engine.strain_threshold
+        late_night = " (late night mode)" if threshold < 50 else ""
+
         def _level_icon(pct: float) -> str:
-            if pct >= 30:
+            if pct >= threshold:
                 return "!!"
-            elif pct >= 20:
+            elif pct >= threshold * 0.6:
                 return "!"
             return ""
 
@@ -246,14 +279,13 @@ class ZenBreakApp(rumps.App):
             pct = strain[a]
             icon = _level_icon(pct)
             parts.append(f"{a.value} {pct:.0f}%{icon}")
-        self.strain_item.title = f"Strain: {' | '.join(parts)}"
+        self.strain_item.title = f"Strain: {' | '.join(parts)}{late_night}"
 
         top_area, top_strain = self.strain.get_priority_reminder()
-        if top_strain >= 30:
+        if top_strain >= threshold:
             self.next_break_item.title = f"Break needed: {top_area.value} ({top_strain:.0f}%)"
         elif top_strain > 0:
-            remaining = 50.0 - top_strain
-            self.next_break_item.title = f"Next break: {top_area.value} at 30% (now {top_strain:.0f}%)"
+            self.next_break_item.title = f"Next break: {top_area.value} at {threshold:.0f}% (now {top_strain:.0f}%)"
         else:
             self.next_break_item.title = "Next break: All good!"
 
