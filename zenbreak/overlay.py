@@ -62,6 +62,7 @@ class OverlayManager(NSObject):
         title: str,
         steps: list[str],
         context_line: str = "",
+        video_url: str | None = None,
         duration_sec: int = 30,
         dismiss_countdown: int = 10,
         opacity: float = 0.95,
@@ -123,6 +124,19 @@ class OverlayManager(NSObject):
             )
             ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(ctx_label)
+
+        # "Watch demo" button (if video URL provided)
+        if video_url:
+            self._video_url = video_url
+            video_button = NSButton.alloc().initWithFrame_(
+                NSMakeRect(center_x - 80, h * 0.28, 160, 36)
+            )
+            video_button.setTitle_("Watch demo")
+            video_button.setBezelStyle_(1)
+            video_button.setFont_(NSFont.systemFontOfSize_(15.0))
+            video_button.setTarget_(self)
+            video_button.setAction_(b"openVideo:")
+            content_view.addSubview_(video_button)
 
         # Exercise timer label (large, prominent)
         timer_label = self._make_label(
@@ -221,6 +235,14 @@ class OverlayManager(NSObject):
     @objc.IBAction
     def dismissClicked_(self, sender):
         self.dismiss()
+
+    @objc.IBAction
+    def openVideo_(self, sender):
+        """Open exercise demo video in browser."""
+        import webbrowser
+        url = getattr(self, '_video_url', None)
+        if url:
+            webbrowser.open(url)
 
     @objc.python_method
     def _setup_escape_key(self):

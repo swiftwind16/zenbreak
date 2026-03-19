@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 from zenbreak.strain import BodyArea
 
+# YouTube search URL helper — more reliable than hardcoded video IDs
+_YT = "https://www.youtube.com/results?search_query="
+
+
+def _yt_search(query: str) -> str:
+    return _YT + query.replace(" ", "+")
+
 
 @dataclass
 class Exercise:
@@ -8,7 +15,7 @@ class Exercise:
     body_area: BodyArea
     steps: list[str]
     duration_sec: int
-    gif_path: str | None = None  # for v2
+    video_url: str | None = None
 
 
 _EXERCISES: dict[BodyArea, list[Exercise]] = {
@@ -22,6 +29,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Blink slowly 10 times",
             ],
             duration_sec=20,
+            video_url=_yt_search("20 20 20 rule eye exercise desk"),
         ),
         Exercise(
             name="Eye Rolling",
@@ -33,6 +41,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Open and blink rapidly for 5 seconds",
             ],
             duration_sec=20,
+            video_url=_yt_search("eye rolling exercise for eye strain"),
         ),
         Exercise(
             name="Palming",
@@ -44,6 +53,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Slowly remove hands and open eyes",
             ],
             duration_sec=30,
+            video_url=_yt_search("palming eye exercise relaxation"),
         ),
     ],
     BodyArea.NECK: [
@@ -58,6 +68,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Return to center. Repeat 3x each direction",
             ],
             duration_sec=30,
+            video_url=_yt_search("neck rolls stretch desk worker"),
         ),
         Exercise(
             name="Chin Tucks",
@@ -69,6 +80,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Release. Repeat 10 times",
             ],
             duration_sec=30,
+            video_url=_yt_search("chin tuck exercise neck posture"),
         ),
         Exercise(
             name="Lateral Neck Stretch",
@@ -80,6 +92,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Repeat on left side — hold 15 sec",
             ],
             duration_sec=30,
+            video_url=_yt_search("lateral neck stretch desk exercise"),
         ),
     ],
     BodyArea.WRISTS: [
@@ -93,6 +106,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Make fists, rotate wrists 10x each direction",
             ],
             duration_sec=40,
+            video_url=_yt_search("wrist extension stretch for typing"),
         ),
         Exercise(
             name="Prayer Stretch",
@@ -104,6 +118,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Shake hands out loosely for 10 seconds",
             ],
             duration_sec=30,
+            video_url=_yt_search("prayer stretch wrist carpal tunnel"),
         ),
         Exercise(
             name="Finger Spreads",
@@ -115,6 +130,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Shake hands out loosely",
             ],
             duration_sec=30,
+            video_url=_yt_search("finger spread exercise hand stretch"),
         ),
     ],
     BodyArea.SHOULDERS: [
@@ -128,6 +144,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Roll shoulders backward 10x, then forward 10x",
             ],
             duration_sec=30,
+            video_url=_yt_search("shoulder shrugs desk stretch"),
         ),
         Exercise(
             name="Arm Across Chest",
@@ -139,6 +156,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Drop both arms and shake out",
             ],
             duration_sec=30,
+            video_url=_yt_search("arm across chest shoulder stretch"),
         ),
     ],
     BodyArea.BACK: [
@@ -152,6 +170,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Return to center. Repeat on right side — 15 sec",
             ],
             duration_sec=30,
+            video_url=_yt_search("seated spinal twist office stretch"),
         ),
         Exercise(
             name="Standing Back Extension",
@@ -163,6 +182,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Return to neutral. Repeat 5 times",
             ],
             duration_sec=30,
+            video_url=_yt_search("standing back extension desk stretch"),
         ),
     ],
     BodyArea.CIRCULATION: [
@@ -187,6 +207,7 @@ _EXERCISES: dict[BodyArea, list[Exercise]] = {
                 "Repeat 15 times",
             ],
             duration_sec=30,
+            video_url=_yt_search("calf raises exercise standing desk"),
         ),
     ],
 }
@@ -211,6 +232,7 @@ POSTURE_REMINDER = Exercise(
         "Screen at eye level, arm's length away",
     ],
     duration_sec=10,
+    video_url=_yt_search("desk posture check ergonomic sitting"),
 )
 
 

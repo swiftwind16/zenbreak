@@ -280,6 +280,7 @@ class ZenBreakApp(rumps.App):
             title=exercise.name.upper(),
             steps=exercise.steps,
             context_line=context_line,
+            video_url=exercise.video_url,
             duration_sec=exercise.duration_sec,
             dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
             on_dismiss=self._on_break_taken,
