@@ -54,12 +54,19 @@ class ZenBreakApp(rumps.App):
         self._last_level = None
         self._in_meeting = False
 
-        # Build menu
+        # Build menu — initialize with persisted data
         _noop = lambda _: None
-        self.next_break_item = rumps.MenuItem("Starting up...", callback=_noop)
-        self.stats_item = rumps.MenuItem("", callback=_noop)
-        self.rank_item = rumps.MenuItem("", callback=_noop)
-        self.challenge_item = rumps.MenuItem("", callback=_noop)
+        taken = self.stats.breaks_taken
+        streak = self.game.streak_days
+        rank_line, challenge_line = self.game.get_menu_summary()
+        stats_parts = [f"{taken} break{'s' if taken != 1 else ''} today"]
+        if streak > 0:
+            stats_parts.append(f"{streak}d streak")
+
+        self.next_break_item = rumps.MenuItem("Next break in ~30 min", callback=_noop)
+        self.stats_item = rumps.MenuItem(" · ".join(stats_parts), callback=_noop)
+        self.rank_item = rumps.MenuItem(rank_line, callback=_noop)
+        self.challenge_item = rumps.MenuItem(challenge_line, callback=_noop)
 
         # Pause submenu
         pause_menu = rumps.MenuItem("Pause")
