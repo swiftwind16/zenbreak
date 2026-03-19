@@ -212,30 +212,21 @@ class ZenBreakApp(rumps.App):
             )
             self.title = f"{area.value}!"
 
-        elif reminder.level == EscalationLevel.LEVEL_3:
+        elif reminder.level in (EscalationLevel.LEVEL_3, EscalationLevel.LEVEL_4):
+            # Full-screen overlay
             if not self.overlay.is_visible:
-                self.overlay.show_semi_transparent(
-                    f"Your {area.value} need a break — {exercise.name}",
-                    opacity=0.5,
+                self.stats.record_break_offered()
+                self.game.record_break_offered()
+                summary = self._get_activity_context(area)
+                self.overlay.show(
+                    title=exercise.name.upper(),
+                    steps=exercise.steps,
+                    context_line=summary,
+                    video_url=exercise.video_url,
+                    duration_sec=exercise.duration_sec,
+                    dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
+                    on_dismiss=self._on_break_taken,
                 )
-            self.title = f"{area.value}!"
-
-        elif reminder.level == EscalationLevel.LEVEL_4:
-            # Dismiss semi-transparent overlay first
-            if self.overlay.is_visible:
-                self.overlay.dismiss()
-
-            self.stats.record_break_offered()
-            self.game.record_break_offered()
-            summary = self._get_activity_context(area)
-            self.overlay.show(
-                title=exercise.name.upper(),
-                steps=exercise.steps,
-                context_line=summary,
-                duration_sec=exercise.duration_sec,
-                dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
-                on_dismiss=self._on_break_taken,
-            )
             self.title = "BREAK"
 
     def _on_break_taken(self):
