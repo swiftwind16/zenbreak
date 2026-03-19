@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- ZenBreak — Properly centered stretching Z + "en" inside clean circle -->
+
+  <!-- Clean circle -->
+  <circle cx="256" cy="256" r="215" fill="none" stroke="#A69BDB" stroke-width="10" opacity="0.45"/>
+
+  <!-- Group everything and center it -->
+  <g transform="translate(256, 270)">
+    <!-- Z as stretching figure — relative to center -->
+    <circle cx="-95" cy="-75" r="12" fill="#6C63FF"/>
+    <path d="M-125,-55 L-45,-55" stroke="#6C63FF" stroke-width="16" stroke-linecap="round"/>
+    <path d="M-52,-55 L-118,65" stroke="#6C63FF" stroke-width="16" stroke-linecap="round"/>
+    <path d="M-125,65 L-45,65" stroke="#6C63FF" stroke-width="16" stroke-linecap="round"/>
+
+    <!-- "en" -->
+    <text x="-25" y="65"
+          font-family="-apple-system, SF Pro Display, Helvetica Neue, sans-serif"
+          font-size="145" font-weight="300" fill="#A69BDB">
+      en
+    </text>
+  </g>
+</svg>
