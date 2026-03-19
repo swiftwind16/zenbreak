@@ -13,6 +13,7 @@ from zenbreak.sound import play_chime
 from zenbreak.idle import get_idle_seconds
 from zenbreak.ai import AIMessageCache, ActivityContext
 from zenbreak.stats import StatsTracker
+from zenbreak.gamification import GameEngine
 
 
 _ICON_PATH = str(Path(__file__).parent.parent / "assets" / "menubar-icon.png")
@@ -37,6 +38,7 @@ class ZenBreakApp(rumps.App):
         self.overlay = OverlayManager.alloc().init()
         self.ai_cache = AIMessageCache()
         self.stats = StatsTracker()
+        self.game = GameEngine()
 
         # Video call apps — suppress reminders when frontmost
         self._video_call_bundles = {
@@ -56,6 +58,8 @@ class ZenBreakApp(rumps.App):
         _noop = lambda _: None
         self.next_break_item = rumps.MenuItem("Starting up...", callback=_noop)
         self.stats_item = rumps.MenuItem("", callback=_noop)
+        self.rank_item = rumps.MenuItem("", callback=_noop)
+        self.challenge_item = rumps.MenuItem("", callback=_noop)
 
         # Pause submenu
         pause_menu = rumps.MenuItem("Pause")
@@ -68,6 +72,8 @@ class ZenBreakApp(rumps.App):
         self.menu = [
             self.next_break_item,
             self.stats_item,
+            self.rank_item,
+            self.challenge_item,
             None,
             self._build_break_menu(),
             pause_menu,
@@ -220,6 +226,7 @@ class ZenBreakApp(rumps.App):
                 self.overlay.dismiss()
 
             self.stats.record_break_offered()
+            self.game.record_break_offered()
             summary = self._get_activity_context(area)
             self.overlay.show(
                 title=exercise.name.upper(),
@@ -241,10 +248,13 @@ class ZenBreakApp(rumps.App):
             )
             area_name = reminder.body_area.value
         self.stats.record_break_taken(area_name)
+
+        # Award XP
+        xp = self.game.record_break(area_name)
+        self.title = f"+{xp} XP"
+
         self.engine.acknowledge()
         self._last_level = None
-        self.stats_item.title = self.stats.get_summary()
-        self.title = ""
 
     def _get_activity_context(self, area: BodyArea) -> str:
         """Generate a context line about current activity."""
@@ -269,13 +279,18 @@ class ZenBreakApp(rumps.App):
         else:
             self.next_break_item.title = "Next break in ~30 min"
 
-        # Combine stats + streak into one clean line
+        # Stats + streak
         taken = self.stats.breaks_taken
-        streak = self.stats.streak_days
+        streak = self.game.streak_days
         parts = [f"{taken} break{'s' if taken != 1 else ''} today"]
         if streak > 0:
             parts.append(f"{streak}d streak")
         self.stats_item.title = " · ".join(parts)
+
+        # Rank + challenge
+        rank_line, challenge_line = self.game.get_menu_summary()
+        self.rank_item.title = rank_line
+        self.challenge_item.title = challenge_line
 
     def _build_break_menu(self):
         """Build 'Take a break' submenu with all body areas."""
