@@ -80,9 +80,43 @@ BREAK_RECOVERY = {
 }
 
 
+import json
+import time
+from pathlib import Path
+
+_STRAIN_PATH = Path.home() / ".zenbreak" / "strain.json"
+
+
 class StrainTracker:
-    def __init__(self):
+    def __init__(self, persist=True):
         self._strain: dict[BodyArea, float] = {area: 0.0 for area in BodyArea}
+        self._persist = persist
+        if persist:
+            self._load()
+
+    def _load(self):
+        """Load persisted strain if recent (< 10 min old)."""
+        if _STRAIN_PATH.exists():
+            try:
+                with open(_STRAIN_PATH) as f:
+                    data = json.load(f)
+                saved_time = data.get("timestamp", 0)
+                if time.time() - saved_time < 600:  # less than 10 min ago
+                    for area in BodyArea:
+                        if area.value in data.get("strain", {}):
+                            self._strain[area] = data["strain"][area.value]
+            except (json.JSONDecodeError, KeyError):
+                pass
+
+    def _save(self):
+        """Persist strain to disk."""
+        _STRAIN_PATH.parent.mkdir(parents=True, exist_ok=True)
+        data = {
+            "timestamp": time.time(),
+            "strain": {area.value: val for area, val in self._strain.items()},
+        }
+        with open(_STRAIN_PATH, "w") as f:
+            json.dump(data, f)
 
     def update(self, snapshot: ActivitySnapshot):
         """Update strain levels based on a new activity snapshot."""
@@ -95,16 +129,23 @@ class StrainTracker:
             if area in (BodyArea.WRISTS, BodyArea.SHOULDERS):
                 rate *= kb_mult
             self._strain[area] = min(100.0, self._strain[area] + rate)
+        if self._persist:
+            self._save()
 
     def record_break(self, area: BodyArea, duration_sec: int):
         """Reduce strain for a body area after a break."""
         recovery = BREAK_RECOVERY.get(area, 1.0) * duration_sec / 10
         self._strain[area] = max(0.0, self._strain[area] - recovery)
+        if self._persist:
+            self._save()
 
     def record_full_break(self, duration_sec: int):
         """Reduce strain for ALL areas (e.g., walking break)."""
         for area in BodyArea:
-            self.record_break(area, duration_sec)
+            recovery = BREAK_RECOVERY.get(area, 1.0) * duration_sec / 10
+            self._strain[area] = max(0.0, self._strain[area] - recovery)
+        if self._persist:
+            self._save()
 
     def get_strain(self) -> dict[BodyArea, float]:
         return dict(self._strain)

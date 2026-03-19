@@ -3,7 +3,7 @@ from zenbreak.activity import ActivitySnapshot
 
 
 def test_strain_increases_from_terminal_heavy_keyboard():
-    tracker = StrainTracker()
+    tracker = StrainTracker(persist=False)
     snapshots = [
         ActivitySnapshot("Terminal", "com.apple.Terminal", 80, 5, t)
         for t in range(0, 300, 5)
@@ -18,7 +18,7 @@ def test_strain_increases_from_terminal_heavy_keyboard():
 
 
 def test_strain_decays_after_break():
-    tracker = StrainTracker()
+    tracker = StrainTracker(persist=False)
     for t in range(0, 600, 5):
         tracker.update(ActivitySnapshot("Terminal", "com.apple.Terminal", 80, 5, t))
 
@@ -29,7 +29,7 @@ def test_strain_decays_after_break():
 
 
 def test_get_most_strained_area():
-    tracker = StrainTracker()
+    tracker = StrainTracker(persist=False)
     for t in range(0, 2400, 5):
         tracker.update(ActivitySnapshot("Terminal", "com.apple.Terminal", 80, 5, t))
 
@@ -38,7 +38,7 @@ def test_get_most_strained_area():
 
 
 def test_strain_caps_at_100():
-    tracker = StrainTracker()
+    tracker = StrainTracker(persist=False)
     for t in range(0, 36000, 5):
         tracker.update(ActivitySnapshot("Terminal", "com.apple.Terminal", 100, 5, t))
 
@@ -47,7 +47,7 @@ def test_strain_caps_at_100():
 
 
 def test_full_break_reduces_all_areas():
-    tracker = StrainTracker()
+    tracker = StrainTracker(persist=False)
     for t in range(0, 600, 5):
         tracker.update(ActivitySnapshot("Terminal", "com.apple.Terminal", 80, 5, t))
 
@@ -60,7 +60,7 @@ def test_full_break_reduces_all_areas():
 
 
 def test_strain_bar_format():
-    tracker = StrainTracker()
+    tracker = StrainTracker(persist=False)
     bar = tracker.get_strain_bar(BodyArea.EYES, width=10)
     assert len(bar) == 10
     assert bar == "░" * 10  # no strain yet
