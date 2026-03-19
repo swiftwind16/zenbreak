@@ -126,28 +126,26 @@ class OverlayManager(NSObject):
             ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(ctx_label)
 
-        # Embedded video player (if cached video exists)
+        # Embedded YouTube video player
         if video_url:
-            from zenbreak.video import get_cached_video, ensure_video_downloaded
-            video_path = get_cached_video(video_url)
-            if video_path:
-                from AVKit import AVPlayerView
-                from AVFoundation import AVPlayer
-                from Foundation import NSURL
+            from zenbreak.video import get_embed_url
+            embed_url = get_embed_url(video_url)
+            if embed_url:
+                from WebKit import WKWebView, WKWebViewConfiguration
+                from Foundation import NSURL, NSURLRequest
 
                 vid_w, vid_h = 480, 270
-                player_view = AVPlayerView.alloc().initWithFrame_(
-                    NSMakeRect(center_x - vid_w / 2, h * 0.25, vid_w, vid_h)
+                config = WKWebViewConfiguration.alloc().init()
+                config.preferences().setJavaScriptEnabled_(True)
+                config.setMediaTypesRequiringUserActionForPlayback_(0)  # autoplay
+
+                webview = WKWebView.alloc().initWithFrame_configuration_(
+                    NSMakeRect(center_x - vid_w / 2, h * 0.25, vid_w, vid_h),
+                    config,
                 )
-                file_url = NSURL.fileURLWithPath_(str(video_path))
-                player = AVPlayer.playerWithURL_(file_url)
-                player_view.setPlayer_(player)
-                player_view.setControlsStyle_(1)  # inline controls
-                content_view.addSubview_(player_view)
-                player.play()
-            else:
-                # Video not cached yet — trigger download for next time
-                ensure_video_downloaded(video_url)
+                url = NSURL.URLWithString_(embed_url)
+                webview.loadRequest_(NSURLRequest.requestWithURL_(url))
+                content_view.addSubview_(webview)
 
         # Exercise timer label (large, prominent)
         timer_label = self._make_label(

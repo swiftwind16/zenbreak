@@ -1,75 +1,18 @@
-"""Video downloading and caching for exercise demos."""
+"""Local HTTP server for YouTube embed playback."""
 
+import http.server
 import logging
-import subprocess
+import re
 import threading
-from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
-VIDEOS_DIR = Path.home() / ".zenbreak" / "videos"
+_server = None
+_port = 0
 
 
-def get_cached_video(video_url: str) -> Path | None:
-    """Return path to cached video file, or None if not yet downloaded."""
-    video_id = _extract_id(video_url)
-    if not video_id:
-        return None
-    path = VIDEOS_DIR / f"{video_id}.mp4"
-    if path.exists():
-        return path
-    return None
-
-
-def ensure_video_downloaded(video_url: str):
-    """Download video in background if not already cached."""
-    video_id = _extract_id(video_url)
-    if not video_id:
-        return
-    path = VIDEOS_DIR / f"{video_id}.mp4"
-    if path.exists():
-        return
-
-    threading.Thread(
-        target=_download_video,
-        args=(video_url, path),
-        daemon=True,
-    ).start()
-
-
-def _download_video(url: str, path: Path):
-    """Download a YouTube video using yt-dlp."""
-    VIDEOS_DIR.mkdir(parents=True, exist_ok=True)
-    try:
-        result = subprocess.run(
-            [
-                "yt-dlp",
-                "-f", "mp4[height<=480]/best[height<=480]",
-                "--max-filesize", "10M",
-                "-o", str(path),
-                "--no-playlist",
-                "--quiet",
-                url,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=60,
-        )
-        if result.returncode == 0 and path.exists():
-            logger.info("[video] Downloaded: %s (%.1fKB)", path.name, path.stat().st_size / 1024)
-        else:
-            logger.warning("[video] Download failed for %s: %s", url, result.stderr[:200])
-    except FileNotFoundError:
-        logger.warning("[video] yt-dlp not installed — video downloads disabled")
-    except subprocess.TimeoutExpired:
-        logger.warning("[video] Download timed out for %s", url)
-    except Exception as e:
-        logger.warning("[video] Download error: %s", e)
-
-
-def _extract_id(url: str) -> str | None:
+def _extract_video_id(url: str) -> str | None:
     """Extract YouTube video ID from URL."""
-    import re
     patterns = [
         r'youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
         r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
@@ -80,3 +23,45 @@ def _extract_id(url: str) -> str | None:
         if match:
             return match.group(1)
     return None
+
+
+class _EmbedHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        video_id = self.path.strip('/')
+        html = f'''<!DOCTYPE html>
+<html><head><style>
+body {{ margin:0; background:#000; overflow:hidden; }}
+iframe {{ width:100%; height:100%; border:none; }}
+</style></head><body>
+<iframe src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
+    allow="autoplay; encrypted-media" allowfullscreen></iframe>
+</body></html>'''
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+        self.wfile.write(html.encode())
+
+    def log_message(self, *args):
+        pass  # suppress logs
+
+
+def start_server():
+    """Start the local embed server (idempotent)."""
+    global _server, _port
+    if _server is not None:
+        return _port
+
+    _server = http.server.HTTPServer(('127.0.0.1', 0), _EmbedHandler)
+    _port = _server.server_address[1]
+    threading.Thread(target=_server.serve_forever, daemon=True).start()
+    logger.info("[video] Embed server started on port %d", _port)
+    return _port
+
+
+def get_embed_url(video_url: str) -> str | None:
+    """Get a local embed URL for a YouTube video."""
+    video_id = _extract_video_id(video_url)
+    if not video_id:
+        return None
+    port = start_server()
+    return f"http://127.0.0.1:{port}/{video_id}"
