@@ -141,7 +141,7 @@ class ZenBreakApp(rumps.App):
         elif self._in_meeting:
             # Just left a meeting — grace period + queue a break
             self._in_meeting = False
-            self._return_grace_until = now + 300  # 5 min grace after meeting
+            self._return_grace_until = now + 60  # 1 min grace after meeting
 
         # Feed latest activity snapshot into strain model
         if self.activity.history:
