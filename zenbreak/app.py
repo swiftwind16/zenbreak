@@ -211,7 +211,7 @@ class ZenBreakApp(rumps.App):
 
         if reminder.level == EscalationLevel.LEVEL_1:
             play_chime()
-            self.title = "break soon"
+            self.title = f"{area.value} now"
 
         elif reminder.level == EscalationLevel.LEVEL_2:
             rumps.notification(
@@ -219,7 +219,7 @@ class ZenBreakApp(rumps.App):
                 subtitle=f"Your {area.value} need attention",
                 message=exercise.steps[0] if exercise.steps else "Take a break",
             )
-            self.title = "break soon"
+            self.title = f"{area.value} now"
 
         elif reminder.level in (EscalationLevel.LEVEL_3, EscalationLevel.LEVEL_4):
             # Full-screen overlay
