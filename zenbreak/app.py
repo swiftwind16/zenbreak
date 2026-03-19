@@ -273,14 +273,20 @@ class ZenBreakApp(rumps.App):
         top_area, top_strain = self.strain.get_priority_reminder()
         threshold = self.engine.strain_threshold
 
+        # Show what the next break will be
+        top_area = self.strain.get_most_strained()
+        next_exercise = self.exercises.get_exercise(top_area)
+        # Peek without advancing the rotation
+        self.exercises._index[top_area] -= 1
+
         if top_strain >= threshold:
-            self.next_break_item.title = "Time for a break"
+            self.next_break_item.title = f"Now: {next_exercise.name} ({top_area.value})"
         elif top_strain > 2:
             remaining_pct = threshold - top_strain
             est_min = max(1, int(remaining_pct / 1.7))
-            self.next_break_item.title = f"Next break in {est_min} min"
+            self.next_break_item.title = f"In {est_min} min: {next_exercise.name} ({top_area.value})"
         else:
-            self.next_break_item.title = "Next break in ~30 min"
+            self.next_break_item.title = f"In ~30 min: {next_exercise.name} ({top_area.value})"
 
         # Stats + streak
         taken = self.stats.breaks_taken
