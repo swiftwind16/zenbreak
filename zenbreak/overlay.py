@@ -238,9 +238,10 @@ class OverlayManager(NSObject):
 
     @objc.IBAction
     def openVideo_(self, sender):
-        """Open exercise demo video in browser."""
+        """Dismiss overlay, then open exercise demo video in browser."""
         import webbrowser
         url = getattr(self, '_video_url', None)
+        self.dismiss()
         if url:
             webbrowser.open(url)
 
