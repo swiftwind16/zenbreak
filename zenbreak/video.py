@@ -30,8 +30,8 @@ class _EmbedHandler(http.server.BaseHTTPRequestHandler):
         video_id = self.path.strip('/')
         html = f'''<!DOCTYPE html>
 <html><head><style>
-body {{ margin:0; background:#000; overflow:hidden; }}
-iframe {{ width:100%; height:100%; border:none; }}
+html, body {{ margin:0; padding:0; width:100%; height:100%; background:#000; overflow:hidden; }}
+iframe {{ position:absolute; top:0; left:0; width:100%; height:100%; border:none; }}
 </style></head><body>
 <iframe src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&playsinline=1"
     allow="autoplay; encrypted-media" allowfullscreen></iframe>
