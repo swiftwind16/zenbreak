@@ -136,13 +136,12 @@ class OverlayManager(NSObject):
             self._ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(self._ctx_label)
 
-        # "Watch demo" button — loads video on click, hidden by default
+        # "Watch demo" button — below steps, loads video on click
         if video_url:
             self._video_url = video_url
             self._content_view = content_view
-            self._video_frame = NSMakeRect(center_x - 400, h * 0.25, 800, 450)
             video_button = NSButton.alloc().initWithFrame_(
-                NSMakeRect(center_x - 75, h * 0.45, 150, 36)
+                NSMakeRect(center_x - 75, step_y - 15, 150, 36)
             )
             video_button.setTitle_("Watch demo")
             video_button.setBezelStyle_(1)
@@ -275,12 +274,14 @@ class OverlayManager(NSObject):
         if btn:
             btn.setHidden_(True)
 
-        # Place video below title, above timer
+        # Place video between title and timer
         screen = NSScreen.mainScreen()
         h = screen.frame().size.height
         w = screen.frame().size.width
         vid_w, vid_h = 640, 360
-        video_frame = NSMakeRect(w / 2 - vid_w / 2, h * 0.28, vid_w, vid_h)
+        # Center vertically between title bottom (h*0.65) and timer top (h*0.22)
+        vid_y = h * 0.22 + (h * 0.65 - h * 0.22 - vid_h) / 2
+        video_frame = NSMakeRect(w / 2 - vid_w / 2, vid_y, vid_w, vid_h)
 
         from WebKit import WKWebView, WKWebViewConfiguration
         from Foundation import NSURL, NSURLRequest
