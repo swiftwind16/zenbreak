@@ -27,14 +27,16 @@ logger = logging.getLogger(__name__)
 
 
 class GradientView(NSView):
-    """NSView subclass that draws a calming blue-green gradient background."""
+    """NSView subclass with a modern dark gradient background."""
 
     def drawRect_(self, rect):
-        color1 = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.12, 0.22, 0.35, 0.95)
-        color2 = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.15, 0.35, 0.40, 0.95)
-        gradient = NSGradient.alloc().initWithStartingColor_endingColor_(color1, color2)
+        # Deep charcoal to warm dark purple — modern, elegant, easy on eyes
+        color1 = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.08, 0.08, 0.12, 1.0)
+        color2 = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.14, 0.10, 0.22, 1.0)
+        color3 = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.10, 0.12, 0.18, 1.0)
+        gradient = NSGradient.alloc().initWithColors_([color1, color2, color3])
         path = NSBezierPath.bezierPathWithRect_(rect)
-        gradient.drawInBezierPath_angle_(path, 270.0)
+        gradient.drawInBezierPath_angle_(path, 135.0)
 
 
 class OverlayManager(NSObject):
@@ -94,11 +96,16 @@ class OverlayManager(NSObject):
         h = frame.size.height
         center_x = w / 2.0
 
+        # Accent color — soft lavender
+        accent = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.68, 0.62, 0.95, 1.0)
+        soft_white = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.92, 0.91, 0.95, 1.0)
+        dim_white = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.92, 0.91, 0.95, 0.6)
+
         # Title
         title_y = h * 0.82 if video_url else h * 0.65
         title_label = self._make_label(
-            title, NSFont.boldSystemFontOfSize_(36.0),
-            NSColor.whiteColor(),
+            title, NSFont.boldSystemFontOfSize_(34.0),
+            accent,
             NSMakeRect(center_x - 400, title_y, 800, 60),
         )
         title_label.setAlignment_(NSCenterTextAlignment)
@@ -109,8 +116,8 @@ class OverlayManager(NSObject):
         for i, step_text in enumerate(steps, start=1):
             step_label = self._make_label(
                 f"  {i}. {step_text}",
-                NSFont.systemFontOfSize_(20.0),
-                NSColor.whiteColor(),
+                NSFont.systemFontOfSize_(19.0),
+                soft_white,
                 NSMakeRect(center_x - 350, step_y, 700, 30),
             )
             content_view.addSubview_(step_label)
@@ -120,7 +127,7 @@ class OverlayManager(NSObject):
         if context_line:
             ctx_label = self._make_label(
                 context_line, NSFont.systemFontOfSize_(14.0),
-                NSColor.colorWithCalibratedRed_green_blue_alpha_(1, 1, 1, 0.7),
+                dim_white,
                 NSMakeRect(center_x - 400, step_y - 30, 800, 25),
             )
             ctx_label.setAlignment_(NSCenterTextAlignment)
@@ -147,33 +154,33 @@ class OverlayManager(NSObject):
                 webview.loadRequest_(NSURLRequest.requestWithURL_(url))
                 content_view.addSubview_(webview)
 
-        # Exercise timer label (large, prominent)
+        # Exercise timer
         timer_label = self._make_label(
             f"Do this for {duration_sec}s",
-            NSFont.boldSystemFontOfSize_(24.0),
-            NSColor.colorWithCalibratedRed_green_blue_alpha_(1, 1, 1, 0.9),
+            NSFont.systemFontOfSize_weight_(22.0, 0.3),  # medium weight
+            accent,
             NSMakeRect(center_x - 200, h * 0.22, 400, 35),
         )
         timer_label.setAlignment_(NSCenterTextAlignment)
         content_view.addSubview_(timer_label)
 
-        # "I did it" button — always visible, disabled during countdown
+        # "I did it" button
         dismiss_button = NSButton.alloc().initWithFrame_(
-            NSMakeRect(center_x - 80, h * 0.14, 160, 44)
+            NSMakeRect(center_x - 90, h * 0.14, 180, 44)
         )
         dismiss_button.setTitle_(f"I did it ({duration_sec}s)")
         dismiss_button.setBezelStyle_(1)
-        dismiss_button.setFont_(NSFont.boldSystemFontOfSize_(18.0))
+        dismiss_button.setFont_(NSFont.systemFontOfSize_weight_(16.0, 0.4))
         dismiss_button.setEnabled_(True)
         dismiss_button.setTarget_(self)
         dismiss_button.setAction_(b"dismissClicked:")
         content_view.addSubview_(dismiss_button)
 
-        # Emergency exit hint
+        # Escape hint
         escape_hint = self._make_label(
-            "Press Esc to dismiss early",
+            "Press Esc to dismiss",
             NSFont.systemFontOfSize_(12.0),
-            NSColor.colorWithCalibratedRed_green_blue_alpha_(1, 1, 1, 0.3),
+            NSColor.colorWithCalibratedRed_green_blue_alpha_(0.92, 0.91, 0.95, 0.2),
             NSMakeRect(center_x - 150, h * 0.08, 300, 20),
         )
         escape_hint.setAlignment_(NSCenterTextAlignment)
