@@ -21,7 +21,7 @@ _ICON_PATH = str(Path(__file__).parent.parent / "assets" / "menubar-icon.png")
 class ZenBreakApp(rumps.App):
     def __init__(self):
         icon = _ICON_PATH if Path(_ICON_PATH).exists() else None
-        super().__init__("ZenBreak", title=None if icon else "Zen", icon=icon)
+        super().__init__("ZenBreak", title=None if icon else "Zen", icon=icon, quit_button=None)
         self.config = load_config()
 
         # Core components
@@ -52,23 +52,27 @@ class ZenBreakApp(rumps.App):
         self._last_level = None
         self._in_meeting = False
 
-        # Build menu — use no-op callback so items aren't greyed out
+        # Build menu
         _noop = lambda _: None
         self.next_break_item = rumps.MenuItem("Starting up...", callback=_noop)
-        self.stats_item = rumps.MenuItem("Today: 0 breaks", callback=_noop)
-        self.streak_item = rumps.MenuItem("", callback=_noop)
+        self.stats_item = rumps.MenuItem("", callback=_noop)
+
+        # Pause submenu
+        pause_menu = rumps.MenuItem("Pause")
+        pause_menu.add(rumps.MenuItem("15 minutes", callback=lambda _: self.pause(15)))
+        pause_menu.add(rumps.MenuItem("30 minutes", callback=lambda _: self.pause(30)))
+        pause_menu.add(rumps.MenuItem("1 hour", callback=lambda _: self.pause(60)))
+        pause_menu.add(None)
+        pause_menu.add(rumps.MenuItem("Resume", callback=lambda _: self.resume()))
 
         self.menu = [
             self.next_break_item,
             self.stats_item,
-            self.streak_item,
             None,
             self._build_break_menu(),
+            pause_menu,
             None,
-            rumps.MenuItem("Pause 15 min", callback=lambda _: self.pause(15)),
-            rumps.MenuItem("Pause 30 min", callback=lambda _: self.pause(30)),
-            rumps.MenuItem("Pause 1 hour", callback=lambda _: self.pause(60)),
-            rumps.MenuItem("Resume", callback=lambda _: self.resume()),
+            rumps.MenuItem("Quit ZenBreak", callback=rumps.quit_application),
         ]
 
     def run(self, **kwargs):
@@ -253,12 +257,11 @@ class ZenBreakApp(rumps.App):
 
     def _update_menu_info(self):
         """Update menu bar items with simple, human-readable status."""
-        # Estimate minutes until next break
         top_area, top_strain = self.strain.get_priority_reminder()
         threshold = self.engine.strain_threshold
 
         if top_strain >= threshold:
-            self.next_break_item.title = "Break time!"
+            self.next_break_item.title = "Time for a break"
         elif top_strain > 2 and self.activity.history:
             rate = max(0.05, top_strain / max(1, len(self.activity.history)))
             remaining_pct = threshold - top_strain
@@ -267,16 +270,13 @@ class ZenBreakApp(rumps.App):
         else:
             self.next_break_item.title = "Next break in ~30 min"
 
-        # Stats
+        # Combine stats + streak into one clean line
         taken = self.stats.breaks_taken
-        self.stats_item.title = f"Today: {taken} break{'s' if taken != 1 else ''} taken"
-
-        # Streak
         streak = self.stats.streak_days
+        parts = [f"{taken} break{'s' if taken != 1 else ''} today"]
         if streak > 0:
-            self.streak_item.title = f"Streak: {streak} day{'s' if streak != 1 else ''}"
-        else:
-            self.streak_item.title = ""
+            parts.append(f"{streak}d streak")
+        self.stats_item.title = " · ".join(parts)
 
     def _build_break_menu(self):
         """Build 'Take a break' submenu with all body areas."""
