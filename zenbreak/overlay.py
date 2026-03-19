@@ -95,16 +95,17 @@ class OverlayManager(NSObject):
         center_x = w / 2.0
 
         # Title
+        title_y = h * 0.82 if video_url else h * 0.65
         title_label = self._make_label(
             title, NSFont.boldSystemFontOfSize_(36.0),
             NSColor.whiteColor(),
-            NSMakeRect(center_x - 400, h * 0.65, 800, 60),
+            NSMakeRect(center_x - 400, title_y, 800, 60),
         )
         title_label.setAlignment_(NSCenterTextAlignment)
         content_view.addSubview_(title_label)
 
         # Exercise steps
-        step_y = h * 0.55
+        step_y = (h * 0.72 if video_url else h * 0.55)
         for i, step_text in enumerate(steps, start=1):
             step_label = self._make_label(
                 f"  {i}. {step_text}",
@@ -125,18 +126,28 @@ class OverlayManager(NSObject):
             ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(ctx_label)
 
-        # "Watch demo" button (if video URL provided)
+        # Embedded video player (if video URL provided)
         if video_url:
-            self._video_url = video_url
-            video_button = NSButton.alloc().initWithFrame_(
-                NSMakeRect(center_x - 80, h * 0.28, 160, 36)
-            )
-            video_button.setTitle_("Watch demo")
-            video_button.setBezelStyle_(1)
-            video_button.setFont_(NSFont.systemFontOfSize_(15.0))
-            video_button.setTarget_(self)
-            video_button.setAction_(b"openVideo:")
-            content_view.addSubview_(video_button)
+            video_id = self._extract_video_id(video_url)
+            if video_id:
+                from WebKit import WKWebView, WKWebViewConfiguration
+                config = WKWebViewConfiguration.alloc().init()
+                config.preferences().setJavaScriptEnabled_(True)
+
+                vid_w, vid_h = 480, 270
+                webview = WKWebView.alloc().initWithFrame_configuration_(
+                    NSMakeRect(center_x - vid_w / 2, h * 0.25, vid_w, vid_h),
+                    config,
+                )
+                # Embed YouTube player with autoplay, no related videos
+                html = f'''<html><body style="margin:0;background:#000;">
+                <iframe width="{vid_w}" height="{vid_h}"
+                    src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&controls=1"
+                    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
+                </iframe></body></html>'''
+                from Foundation import NSURL
+                webview.loadHTMLString_baseURL_(html, NSURL.URLWithString_("about:blank"))
+                content_view.addSubview_(webview)
 
         # Exercise timer label (large, prominent)
         timer_label = self._make_label(
@@ -236,14 +247,21 @@ class OverlayManager(NSObject):
     def dismissClicked_(self, sender):
         self.dismiss()
 
-    @objc.IBAction
-    def openVideo_(self, sender):
-        """Dismiss overlay, then open exercise demo video in browser."""
-        import webbrowser
-        url = getattr(self, '_video_url', None)
-        self.dismiss()
-        if url:
-            webbrowser.open(url)
+    @staticmethod
+    def _extract_video_id(url: str) -> str | None:
+        """Extract YouTube video ID from various URL formats."""
+        import re
+        patterns = [
+            r'youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
+            r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
+            r'youtu\.be/([a-zA-Z0-9_-]{11})',
+            r'youtube\.com/embed/([a-zA-Z0-9_-]{11})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
 
     @objc.python_method
     def _setup_escape_key(self):
