@@ -53,6 +53,7 @@ class ZenBreakApp(rumps.App):
         self._return_grace_until = 0.0
         self._last_level = None
         self._in_meeting = False
+        self._xp_flash_until = 0.0
 
         # Build menu — initialize with persisted data
         _noop = lambda _: None
@@ -175,23 +176,26 @@ class ZenBreakApp(rumps.App):
         # Update menu bar info
         self._update_menu_info()
 
+        # Don't update title while showing XP flash
+        xp_flashing = now < self._xp_flash_until
+
         # Check if reminder should fire
         strain_levels = self.strain.get_strain()
         reminder = self.engine.check(strain_levels)
 
         if reminder is None:
             self._last_level = None
-            top_area, top_strain = self.strain.get_priority_reminder()
-            threshold = self.engine.strain_threshold
-            if top_strain >= threshold:
-                self.title = "!"
-            elif top_strain > 2:
-                # Simple estimate: strain rate is ~1.7%/min for IDE use
-                remaining_pct = threshold - top_strain
-                est_min = max(1, int(remaining_pct / 1.7))
-                self.title = f"{est_min}m"
-            else:
-                self.title = ""
+            if not xp_flashing:
+                top_area, top_strain = self.strain.get_priority_reminder()
+                threshold = self.engine.strain_threshold
+                if top_strain >= threshold:
+                    self.title = "!"
+                elif top_strain > 2:
+                    remaining_pct = threshold - top_strain
+                    est_min = max(1, int(remaining_pct / 1.7))
+                    self.title = f"{est_min}m"
+                else:
+                    self.title = ""
             return
 
         self._handle_reminder(reminder)
@@ -247,9 +251,10 @@ class ZenBreakApp(rumps.App):
             area_name = reminder.body_area.value
         self.stats.record_break_taken(area_name)
 
-        # Award XP
+        # Award XP — show briefly then fade
         xp = self.game.record_break(area_name)
         self.title = f"+{xp} XP"
+        self._xp_flash_until = time.time() + 3  # show for 3 seconds
 
         self.engine.acknowledge()
         self._last_level = None
