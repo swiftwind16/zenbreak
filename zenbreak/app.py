@@ -106,7 +106,7 @@ class ZenBreakApp(rumps.App):
         now = time.time()
 
         if not self._in_work_hours():
-            self.title = "🧘 off"
+            self.title = "off"
             return
 
         # Check idle
@@ -116,7 +116,7 @@ class ZenBreakApp(rumps.App):
         if idle_sec > idle_threshold:
             if not self._idle_paused:
                 self._idle_paused = True
-                self.title = "🧘 away"
+                self.title = "away"
                 if self.overlay.is_visible:
                     self.overlay.dismiss()
             return
@@ -131,7 +131,7 @@ class ZenBreakApp(rumps.App):
         # Grace period after returning
         if now < self._return_grace_until:
             remaining = int(self._return_grace_until - now)
-            self.title = f"🧘 {remaining // 60}m grace"
+            self.title = f"{remaining // 60}m grace"
             return
 
         # Meeting detection — suppress reminders when in video call
@@ -139,7 +139,7 @@ class ZenBreakApp(rumps.App):
         if latest and latest.bundle_id in self._video_call_bundles:
             if not self._in_meeting:
                 self._in_meeting = True
-                self.title = "🧘 meeting"
+                self.title = "mtg"
                 if self.overlay.is_visible:
                     self.overlay.dismiss()
             return
@@ -175,9 +175,9 @@ class ZenBreakApp(rumps.App):
                 if self.activity.history and top_strain > 5:
                     rate = max(0.05, top_strain / max(1, len(self.activity.history)))
                     est_min = max(1, int(remaining_pct / rate / 12))
-                    self.title = f"🧘 {est_min}m"
+                    self.title = f"{est_min}m"
                 else:
-                    self.title = "🧘 --m"
+                    self.title = ""
             return
 
         self._handle_reminder(reminder)
@@ -195,7 +195,7 @@ class ZenBreakApp(rumps.App):
 
         if reminder.level == EscalationLevel.LEVEL_1:
             play_chime()
-            self.title = f"⚠️ {area.value}!"
+            self.title = f"{area.value}!"
 
         elif reminder.level == EscalationLevel.LEVEL_2:
             rumps.notification(
@@ -203,7 +203,7 @@ class ZenBreakApp(rumps.App):
                 subtitle=f"Your {area.value} need attention",
                 message=exercise.steps[0] if exercise.steps else "Take a break",
             )
-            self.title = f"⚠️ {area.value}!"
+            self.title = f"{area.value}!"
 
         elif reminder.level == EscalationLevel.LEVEL_3:
             if not self.overlay.is_visible:
@@ -211,7 +211,7 @@ class ZenBreakApp(rumps.App):
                     f"Your {area.value} need a break — {exercise.name}",
                     opacity=0.5,
                 )
-            self.title = f"🛑 {area.value}!"
+            self.title = f"{area.value}!"
 
         elif reminder.level == EscalationLevel.LEVEL_4:
             # Dismiss semi-transparent overlay first
@@ -228,7 +228,7 @@ class ZenBreakApp(rumps.App):
                 dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
                 on_dismiss=self._on_break_taken,
             )
-            self.title = "🛑 BREAK"
+            self.title = "BREAK"
 
     def _on_break_taken(self):
         """Called when user clicks 'I did it'."""
@@ -243,7 +243,7 @@ class ZenBreakApp(rumps.App):
         self.engine.acknowledge()
         self._last_level = None
         self.stats_item.title = self.stats.get_summary()
-        self.title = "🧘 ✓"
+        self.title = ""
 
     def _get_activity_context(self, area: BodyArea) -> str:
         """Generate a context line about current activity."""
@@ -322,7 +322,7 @@ class ZenBreakApp(rumps.App):
             dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
             on_dismiss=self._on_break_taken,
         )
-        self.title = "🛑 BREAK"
+        self.title = "BREAK"
 
     def _get_ai_context(self, area: BodyArea) -> str | None:
         """Get AI-generated context message for this break."""
@@ -372,13 +372,13 @@ class ZenBreakApp(rumps.App):
 
     def pause(self, minutes: int):
         self.engine.pause(minutes)
-        self.title = f"🧘 ⏸ {minutes}m"
+        self.title = f"⏸ {minutes}m"
         if self.overlay.is_visible:
             self.overlay.dismiss()
 
     def resume(self):
         self.engine.resume()
-        self.title = "🧘 --m"
+        self.title = ""
 
 
 def main():
