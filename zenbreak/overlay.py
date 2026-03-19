@@ -102,7 +102,7 @@ class OverlayManager(NSObject):
         dim_white = NSColor.colorWithCalibratedRed_green_blue_alpha_(0.92, 0.91, 0.95, 0.6)
 
         # Title
-        title_y = h * 0.82 if video_url else h * 0.65
+        title_y = h * 0.65
         title_label = self._make_label(
             title, NSFont.boldSystemFontOfSize_(34.0),
             accent,
@@ -112,7 +112,7 @@ class OverlayManager(NSObject):
         content_view.addSubview_(title_label)
 
         # Exercise steps
-        step_y = (h * 0.72 if video_url else h * 0.55)
+        step_y = h * 0.55
         for i, step_text in enumerate(steps, start=1):
             step_label = self._make_label(
                 f"  {i}. {step_text}",
@@ -133,26 +133,21 @@ class OverlayManager(NSObject):
             ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(ctx_label)
 
-        # Embedded YouTube video player
+        # "Watch demo" button — loads video on click, hidden by default
         if video_url:
-            from zenbreak.video import get_embed_url
-            embed_url = get_embed_url(video_url)
-            if embed_url:
-                from WebKit import WKWebView, WKWebViewConfiguration
-                from Foundation import NSURL, NSURLRequest
-
-                vid_w, vid_h = 800, 450  # 16:9 ratio
-                config = WKWebViewConfiguration.alloc().init()
-                config.preferences().setJavaScriptEnabled_(True)
-                config.setMediaTypesRequiringUserActionForPlayback_(0)  # autoplay
-
-                webview = WKWebView.alloc().initWithFrame_configuration_(
-                    NSMakeRect(center_x - vid_w / 2, h * 0.25, vid_w, vid_h),
-                    config,
-                )
-                url = NSURL.URLWithString_(embed_url)
-                webview.loadRequest_(NSURLRequest.requestWithURL_(url))
-                content_view.addSubview_(webview)
+            self._video_url = video_url
+            self._content_view = content_view
+            self._video_frame = NSMakeRect(center_x - 400, h * 0.25, 800, 450)
+            video_button = NSButton.alloc().initWithFrame_(
+                NSMakeRect(center_x - 75, h * 0.45, 150, 36)
+            )
+            video_button.setTitle_("Watch demo")
+            video_button.setBezelStyle_(1)
+            video_button.setFont_(NSFont.systemFontOfSize_(15.0))
+            video_button.setTarget_(self)
+            video_button.setAction_(b"loadVideo:")
+            content_view.addSubview_(video_button)
+            self._video_button = video_button
 
         # Exercise timer
         timer_label = self._make_label(
@@ -251,6 +246,37 @@ class OverlayManager(NSObject):
     @objc.IBAction
     def dismissClicked_(self, sender):
         self.dismiss()
+
+    @objc.IBAction
+    def loadVideo_(self, sender):
+        """Load and show the exercise demo video."""
+        url = getattr(self, '_video_url', None)
+        content_view = getattr(self, '_content_view', None)
+        frame = getattr(self, '_video_frame', None)
+        if not url or not content_view or not frame:
+            return
+
+        from zenbreak.video import get_embed_url
+        embed_url = get_embed_url(url)
+        if not embed_url:
+            return
+
+        from WebKit import WKWebView, WKWebViewConfiguration
+        from Foundation import NSURL, NSURLRequest
+
+        config = WKWebViewConfiguration.alloc().init()
+        config.preferences().setJavaScriptEnabled_(True)
+        config.setMediaTypesRequiringUserActionForPlayback_(0)
+
+        webview = WKWebView.alloc().initWithFrame_configuration_(frame, config)
+        web_url = NSURL.URLWithString_(embed_url)
+        webview.loadRequest_(NSURLRequest.requestWithURL_(web_url))
+        content_view.addSubview_(webview)
+
+        # Hide the button
+        btn = getattr(self, '_video_button', None)
+        if btn:
+            btn.setHidden_(True)
 
 
     @objc.python_method
