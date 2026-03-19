@@ -190,7 +190,7 @@ class ZenBreakApp(rumps.App):
                 threshold = self.engine.strain_threshold
                 if top_strain > 2:
                     remaining_pct = max(0, threshold - top_strain)
-                    est_min = max(1, int(remaining_pct / 1.7))
+                    est_min = max(1, int(remaining_pct / 1.0))
                     self.title = f"{top_area.value} {est_min}m"
                 else:
                     self.title = ""
@@ -281,7 +281,7 @@ class ZenBreakApp(rumps.App):
             self.next_break_item.title = f"Now: {next_exercise.name} ({top_area.value})"
         elif top_strain > 2:
             remaining_pct = threshold - top_strain
-            est_min = max(1, int(remaining_pct / 1.7))
+            est_min = max(1, int(remaining_pct / 1.0))
             self.next_break_item.title = f"In {est_min} min: {next_exercise.name} ({top_area.value})"
         else:
             self.next_break_item.title = f"In ~30 min: {next_exercise.name} ({top_area.value})"
