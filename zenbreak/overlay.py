@@ -112,6 +112,7 @@ class OverlayManager(NSObject):
         content_view.addSubview_(title_label)
 
         # Exercise steps
+        self._step_labels = []
         step_y = h * 0.55
         for i, step_text in enumerate(steps, start=1):
             step_label = self._make_label(
@@ -121,17 +122,19 @@ class OverlayManager(NSObject):
                 NSMakeRect(center_x - 350, step_y, 700, 30),
             )
             content_view.addSubview_(step_label)
+            self._step_labels.append(step_label)
             step_y -= 35
 
         # Context line
+        self._ctx_label = None
         if context_line:
-            ctx_label = self._make_label(
+            self._ctx_label = self._make_label(
                 context_line, NSFont.systemFontOfSize_(14.0),
                 dim_white,
                 NSMakeRect(center_x - 400, step_y - 30, 800, 25),
             )
-            ctx_label.setAlignment_(NSCenterTextAlignment)
-            content_view.addSubview_(ctx_label)
+            self._ctx_label.setAlignment_(NSCenterTextAlignment)
+            content_view.addSubview_(self._ctx_label)
 
         # "Watch demo" button — loads video on click, hidden by default
         if video_url:
@@ -249,17 +252,35 @@ class OverlayManager(NSObject):
 
     @objc.IBAction
     def loadVideo_(self, sender):
-        """Load and show the exercise demo video."""
+        """Load and show the exercise demo video, replacing text steps."""
         url = getattr(self, '_video_url', None)
         content_view = getattr(self, '_content_view', None)
-        frame = getattr(self, '_video_frame', None)
-        if not url or not content_view or not frame:
+        if not url or not content_view:
             return
 
         from zenbreak.video import get_embed_url
         embed_url = get_embed_url(url)
         if not embed_url:
             return
+
+        # Hide text steps and context line
+        for label in getattr(self, '_step_labels', []):
+            label.setHidden_(True)
+        ctx = getattr(self, '_ctx_label', None)
+        if ctx:
+            ctx.setHidden_(True)
+
+        # Hide the watch demo button
+        btn = getattr(self, '_video_button', None)
+        if btn:
+            btn.setHidden_(True)
+
+        # Place video below title, above timer
+        screen = NSScreen.mainScreen()
+        h = screen.frame().size.height
+        w = screen.frame().size.width
+        vid_w, vid_h = 640, 360
+        video_frame = NSMakeRect(w / 2 - vid_w / 2, h * 0.28, vid_w, vid_h)
 
         from WebKit import WKWebView, WKWebViewConfiguration
         from Foundation import NSURL, NSURLRequest
@@ -268,15 +289,10 @@ class OverlayManager(NSObject):
         config.preferences().setJavaScriptEnabled_(True)
         config.setMediaTypesRequiringUserActionForPlayback_(0)
 
-        webview = WKWebView.alloc().initWithFrame_configuration_(frame, config)
+        webview = WKWebView.alloc().initWithFrame_configuration_(video_frame, config)
         web_url = NSURL.URLWithString_(embed_url)
         webview.loadRequest_(NSURLRequest.requestWithURL_(web_url))
         content_view.addSubview_(webview)
-
-        # Hide the button
-        btn = getattr(self, '_video_button', None)
-        if btn:
-            btn.setHidden_(True)
 
 
     @objc.python_method
