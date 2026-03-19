@@ -1,6 +1,7 @@
 import rumps
 import time
 from datetime import datetime
+from pathlib import Path
 
 from zenbreak.config import load_config
 from zenbreak.activity import ActivityMonitor, APP_CATEGORIES, AppSessionSummary
@@ -14,9 +15,13 @@ from zenbreak.ai import AIMessageCache, ActivityContext
 from zenbreak.stats import StatsTracker
 
 
+_ICON_PATH = str(Path(__file__).parent.parent / "assets" / "menubar-icon.png")
+
+
 class ZenBreakApp(rumps.App):
     def __init__(self):
-        super().__init__("ZenBreak", title="🧘 --m")
+        icon = _ICON_PATH if Path(_ICON_PATH).exists() else None
+        super().__init__("ZenBreak", title=None if icon else "Zen", icon=icon)
         self.config = load_config()
 
         # Core components
