@@ -188,10 +188,8 @@ class ZenBreakApp(rumps.App):
             if not xp_flashing:
                 top_area, top_strain = self.strain.get_priority_reminder()
                 threshold = self.engine.strain_threshold
-                if top_strain >= threshold:
-                    self.title = "!"
-                elif top_strain > 2:
-                    remaining_pct = threshold - top_strain
+                if top_strain > 2:
+                    remaining_pct = max(0, threshold - top_strain)
                     est_min = max(1, int(remaining_pct / 1.7))
                     self.title = f"{est_min}m"
                 else:
@@ -213,7 +211,7 @@ class ZenBreakApp(rumps.App):
 
         if reminder.level == EscalationLevel.LEVEL_1:
             play_chime()
-            self.title = f"{area.value}!"
+            self.title = "break soon"
 
         elif reminder.level == EscalationLevel.LEVEL_2:
             rumps.notification(
@@ -221,7 +219,7 @@ class ZenBreakApp(rumps.App):
                 subtitle=f"Your {area.value} need attention",
                 message=exercise.steps[0] if exercise.steps else "Take a break",
             )
-            self.title = f"{area.value}!"
+            self.title = "break soon"
 
         elif reminder.level in (EscalationLevel.LEVEL_3, EscalationLevel.LEVEL_4):
             # Full-screen overlay
