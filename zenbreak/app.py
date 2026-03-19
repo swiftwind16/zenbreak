@@ -226,11 +226,11 @@ class ZenBreakApp(rumps.App):
             if not self.overlay.is_visible:
                 self.stats.record_break_offered()
                 self.game.record_break_offered()
-                summary = self._get_activity_context(area)
+                context = self._get_ai_context(area) or ""
                 self.overlay.show(
                     title=exercise.name.upper(),
                     steps=exercise.steps,
-                    context_line=summary,
+                    context_line=context,
                     video_url=exercise.video_url,
                     duration_sec=exercise.duration_sec,
                     dismiss_countdown=self.config["escalation"]["dismiss_countdown_sec"],
@@ -257,14 +257,6 @@ class ZenBreakApp(rumps.App):
         self.engine.acknowledge()
         self._last_level = None
 
-    def _get_activity_context(self, area: BodyArea) -> str:
-        """Generate a context line about current activity."""
-        summary = self.activity.get_session_summary()
-        if not summary:
-            return f"Your {area.value} need attention."
-        top = summary[0]
-        duration = int(top.total_duration_seconds / 60)
-        return f"{duration}min of {top.app_name} — your {area.value} need this."
 
     def _update_menu_info(self):
         """Update menu bar items with simple, human-readable status."""
