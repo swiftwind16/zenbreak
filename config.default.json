@@ -1,5 +1,5 @@
 {
-  "work_hours": { "start": "10:00", "end": "01:00" },
+  "work_hours": { "start": "09:00", "end": "01:00" },
   "idle_threshold_sec": 120,
   "return_grace_min": 5,
   "typing_pause_sec": 5,

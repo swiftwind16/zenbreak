@@ -54,17 +54,14 @@ class ZenBreakApp(rumps.App):
 
         # Build menu — use no-op callback so items aren't greyed out
         _noop = lambda _: None
-        self.current_activity_item = rumps.MenuItem("Current: Starting up...", callback=_noop)
-        self.strain_item = rumps.MenuItem("Strain: Calculating...", callback=_noop)
-        self.next_break_item = rumps.MenuItem("Next break: Calculating...", callback=_noop)
-        self.stats_item = rumps.MenuItem(self.stats.get_summary(), callback=_noop)
+        self.next_break_item = rumps.MenuItem("Starting up...", callback=_noop)
+        self.stats_item = rumps.MenuItem("Today: 0 breaks", callback=_noop)
+        self.streak_item = rumps.MenuItem("", callback=_noop)
 
         self.menu = [
-            self.current_activity_item,
-            self.strain_item,
             self.next_break_item,
-            None,
             self.stats_item,
+            self.streak_item,
             None,
             self._build_break_menu(),
             None,
@@ -170,14 +167,14 @@ class ZenBreakApp(rumps.App):
         if reminder is None:
             self._last_level = None
             top_area, top_strain = self.strain.get_priority_reminder()
-            if top_strain > 0:
-                remaining_pct = max(0, 50.0 - top_strain)
-                if self.activity.history and top_strain > 5:
-                    rate = max(0.05, top_strain / max(1, len(self.activity.history)))
-                    est_min = max(1, int(remaining_pct / rate / 12))
-                    self.title = f"{est_min}m"
-                else:
-                    self.title = ""
+            if top_strain > 2 and self.activity.history:
+                threshold = self.engine.strain_threshold
+                rate = max(0.05, top_strain / max(1, len(self.activity.history)))
+                remaining_pct = threshold - top_strain
+                est_min = max(1, int(remaining_pct / rate / 12))
+                self.title = f"{est_min}m"
+            else:
+                self.title = ""
             return
 
         self._handle_reminder(reminder)
@@ -255,44 +252,31 @@ class ZenBreakApp(rumps.App):
         return f"{duration}min of {top.app_name} — your {area.value} need this."
 
     def _update_menu_info(self):
-        """Update menu bar items with current status."""
-        try:
-            latest = self.activity.latest
-            if latest:
-                category = APP_CATEGORIES.get(latest.bundle_id, "other")
-                self.current_activity_item.title = f"Current: {latest.app_name} ({category})"
-            else:
-                self.current_activity_item.title = "Current: Waiting for data..."
-        except Exception:
-            self.current_activity_item.title = "Current: Monitoring..."
-
-        strain = self.strain.get_strain()
-        top_areas = sorted(BodyArea, key=lambda a: strain[a], reverse=True)[:3]
-
-        threshold = self.engine.strain_threshold
-        late_night = " (late night mode)" if threshold < 50 else ""
-
-        def _level_icon(pct: float) -> str:
-            if pct >= threshold:
-                return "!!"
-            elif pct >= threshold * 0.6:
-                return "!"
-            return ""
-
-        parts = []
-        for a in top_areas:
-            pct = strain[a]
-            icon = _level_icon(pct)
-            parts.append(f"{a.value} {pct:.0f}%{icon}")
-        self.strain_item.title = f"Strain: {' | '.join(parts)}{late_night}"
-
+        """Update menu bar items with simple, human-readable status."""
+        # Estimate minutes until next break
         top_area, top_strain = self.strain.get_priority_reminder()
+        threshold = self.engine.strain_threshold
+
         if top_strain >= threshold:
-            self.next_break_item.title = f"Break needed: {top_area.value} ({top_strain:.0f}%)"
-        elif top_strain > 0:
-            self.next_break_item.title = f"Next break: {top_area.value} at {threshold:.0f}% (now {top_strain:.0f}%)"
+            self.next_break_item.title = "Break time!"
+        elif top_strain > 2 and self.activity.history:
+            rate = max(0.05, top_strain / max(1, len(self.activity.history)))
+            remaining_pct = threshold - top_strain
+            est_min = max(1, int(remaining_pct / rate / 12))
+            self.next_break_item.title = f"Next break in {est_min} min"
         else:
-            self.next_break_item.title = "Next break: All good!"
+            self.next_break_item.title = "Next break in ~30 min"
+
+        # Stats
+        taken = self.stats.breaks_taken
+        self.stats_item.title = f"Today: {taken} break{'s' if taken != 1 else ''} taken"
+
+        # Streak
+        streak = self.stats.streak_days
+        if streak > 0:
+            self.streak_item.title = f"Streak: {streak} day{'s' if streak != 1 else ''}"
+        else:
+            self.streak_item.title = ""
 
     def _build_break_menu(self):
         """Build 'Take a break' submenu with all body areas."""
