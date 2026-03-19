@@ -128,7 +128,11 @@ class StrainTracker:
             rate = base_rate
             if area in (BodyArea.WRISTS, BodyArea.SHOULDERS):
                 rate *= kb_mult
-            self._strain[area] = min(100.0, self._strain[area] + rate)
+            # Natural decay: strain slowly decreases (-0.02 per tick)
+            # Net effect: strain still rises during activity but has a cap
+            decay = 0.02
+            new_val = self._strain[area] + rate - decay
+            self._strain[area] = max(0.0, min(100.0, new_val))
         if self._persist:
             self._save()
 
