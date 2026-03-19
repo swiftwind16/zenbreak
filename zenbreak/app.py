@@ -63,6 +63,7 @@ class ZenBreakApp(rumps.App):
     def run(self, **kwargs):
         self.activity.start()
         self._prefill_ai_cache()
+        self._prefetch_videos()
         super().run(**kwargs)
 
     def _prefill_ai_cache(self):
@@ -85,6 +86,21 @@ class ZenBreakApp(rumps.App):
                 time.sleep(1)  # don't hammer Ollama
 
         threading.Thread(target=_generate, daemon=True).start()
+
+    def _prefetch_videos(self):
+        """Pre-download all exercise videos in background."""
+        import threading
+        from zenbreak.video import ensure_video_downloaded
+        from zenbreak.exercises import _EXERCISES
+
+        def _download_all():
+            for exercises in _EXERCISES.values():
+                for ex in exercises:
+                    if ex.video_url:
+                        ensure_video_downloaded(ex.video_url)
+                        time.sleep(2)  # don't hammer network
+
+        threading.Thread(target=_download_all, daemon=True).start()
 
     @rumps.timer(5)
     def tick(self, _):

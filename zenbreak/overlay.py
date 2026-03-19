@@ -126,28 +126,28 @@ class OverlayManager(NSObject):
             ctx_label.setAlignment_(NSCenterTextAlignment)
             content_view.addSubview_(ctx_label)
 
-        # Embedded video player (if video URL provided)
+        # Embedded video player (if cached video exists)
         if video_url:
-            video_id = self._extract_video_id(video_url)
-            if video_id:
-                from WebKit import WKWebView, WKWebViewConfiguration
-                config = WKWebViewConfiguration.alloc().init()
-                config.preferences().setJavaScriptEnabled_(True)
+            from zenbreak.video import get_cached_video, ensure_video_downloaded
+            video_path = get_cached_video(video_url)
+            if video_path:
+                from AVKit import AVPlayerView
+                from AVFoundation import AVPlayer
+                from Foundation import NSURL
 
                 vid_w, vid_h = 480, 270
-                webview = WKWebView.alloc().initWithFrame_configuration_(
-                    NSMakeRect(center_x - vid_w / 2, h * 0.25, vid_w, vid_h),
-                    config,
+                player_view = AVPlayerView.alloc().initWithFrame_(
+                    NSMakeRect(center_x - vid_w / 2, h * 0.25, vid_w, vid_h)
                 )
-                # Embed YouTube player with autoplay, no related videos
-                html = f'''<html><body style="margin:0;background:#000;">
-                <iframe width="{vid_w}" height="{vid_h}"
-                    src="https://www.youtube.com/embed/{video_id}?autoplay=1&rel=0&modestbranding=1&controls=1"
-                    frameborder="0" allow="autoplay; encrypted-media" allowfullscreen>
-                </iframe></body></html>'''
-                from Foundation import NSURL
-                webview.loadHTMLString_baseURL_(html, NSURL.URLWithString_("about:blank"))
-                content_view.addSubview_(webview)
+                file_url = NSURL.fileURLWithPath_(str(video_path))
+                player = AVPlayer.playerWithURL_(file_url)
+                player_view.setPlayer_(player)
+                player_view.setControlsStyle_(1)  # inline controls
+                content_view.addSubview_(player_view)
+                player.play()
+            else:
+                # Video not cached yet — trigger download for next time
+                ensure_video_downloaded(video_url)
 
         # Exercise timer label (large, prominent)
         timer_label = self._make_label(
@@ -247,21 +247,6 @@ class OverlayManager(NSObject):
     def dismissClicked_(self, sender):
         self.dismiss()
 
-    @staticmethod
-    def _extract_video_id(url: str) -> str | None:
-        """Extract YouTube video ID from various URL formats."""
-        import re
-        patterns = [
-            r'youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})',
-            r'youtube\.com/shorts/([a-zA-Z0-9_-]{11})',
-            r'youtu\.be/([a-zA-Z0-9_-]{11})',
-            r'youtube\.com/embed/([a-zA-Z0-9_-]{11})',
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, url)
-            if match:
-                return match.group(1)
-        return None
 
     @objc.python_method
     def _setup_escape_key(self):
