@@ -11,6 +11,7 @@ from zenbreak.overlay import OverlayManager
 from zenbreak.sound import play_chime
 from zenbreak.idle import get_idle_seconds
 from zenbreak.ai import AIMessageCache, ActivityContext
+from zenbreak.stats import StatsTracker
 
 
 class ZenBreakApp(rumps.App):
@@ -30,22 +31,19 @@ class ZenBreakApp(rumps.App):
         self.exercises = ExerciseLibrary()
         self.overlay = OverlayManager.alloc().init()
         self.ai_cache = AIMessageCache()
+        self.stats = StatsTracker()
 
         # State
         self._idle_paused = False
         self._return_grace_until = 0.0
         self._last_level = None
 
-        # Stats
-        self.breaks_taken = 0
-        self.breaks_total = 0
-
         # Build menu — use no-op callback so items aren't greyed out
         _noop = lambda _: None
         self.current_activity_item = rumps.MenuItem("Current: Starting up...", callback=_noop)
         self.strain_item = rumps.MenuItem("Strain: Calculating...", callback=_noop)
         self.next_break_item = rumps.MenuItem("Next break: Calculating...", callback=_noop)
-        self.stats_item = rumps.MenuItem("Today: 0 breaks taken", callback=_noop)
+        self.stats_item = rumps.MenuItem(self.stats.get_summary(), callback=_noop)
 
         self.menu = [
             self.current_activity_item,
@@ -185,7 +183,7 @@ class ZenBreakApp(rumps.App):
             if self.overlay.is_visible:
                 self.overlay.dismiss()
 
-            self.breaks_total += 1
+            self.stats.record_break_offered()
             summary = self._get_activity_context(area)
             self.overlay.show(
                 title=exercise.name.upper(),
@@ -199,17 +197,17 @@ class ZenBreakApp(rumps.App):
 
     def _on_break_taken(self):
         """Called when user clicks 'I did it'."""
-        self.breaks_taken += 1
         reminder = self.engine._active_reminder
+        area_name = "unknown"
         if reminder and reminder.exercise:
             self.strain.record_break(
                 reminder.body_area, reminder.exercise.duration_sec
             )
+            area_name = reminder.body_area.value
+        self.stats.record_break_taken(area_name)
         self.engine.acknowledge()
         self._last_level = None
-        self.stats_item.title = (
-            f"Today: {self.breaks_taken}/{self.breaks_total} breaks taken"
-        )
+        self.stats_item.title = self.stats.get_summary()
         self.title = "🧘 ✓"
 
     def _get_activity_context(self, area: BodyArea) -> str:
@@ -274,7 +272,7 @@ class ZenBreakApp(rumps.App):
     def _trigger_break_for(self, area: BodyArea):
         """Trigger a break for a specific body area."""
         exercise = self.exercises.get_exercise(area)
-        self.breaks_total += 1
+        self.stats.record_break_offered()
         context_line = self._get_ai_context(area) or ""
         if self.overlay.is_visible:
             self.overlay.dismiss()
