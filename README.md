@@ -4,8 +4,6 @@
 
 ZenBreak watches how you work — which apps you use, how intensely you type — and delivers the right break at the right time. Not a dumb timer. A personal PT that knows when your wrists need a stretch vs. when your eyes need rest.
 
-https://github.com/yourusername/zenbreak
-
 ---
 
 ## Why ZenBreak?
@@ -44,7 +42,7 @@ Every break reminder app fails for the same reasons:
 ### Install
 
 ```bash
-git clone https://github.com/yourusername/zenbreak.git
+git clone https://github.com/swiftwind16/zenbreak.git
 cd zenbreak
 pip install -r requirements.txt
 
