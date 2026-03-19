@@ -83,8 +83,8 @@ class OverlayManager(NSObject):
         )
         self._window.setLevel_(NSFloatingWindowLevel + 1)
         self._window.setCollectionBehavior_(1 << 0)
-        self._window.setOpaque_(False)
-        self._window.setAlphaValue_(opacity)
+        self._window.setOpaque_(True)
+        self._window.setAlphaValue_(1.0)
         self._window.setIgnoresMouseEvents_(False)
 
         content_view = GradientView.alloc().initWithFrame_(frame)
@@ -134,7 +134,7 @@ class OverlayManager(NSObject):
                 from WebKit import WKWebView, WKWebViewConfiguration
                 from Foundation import NSURL, NSURLRequest
 
-                vid_w, vid_h = 480, 270
+                vid_w, vid_h = 800, 450  # 16:9 ratio
                 config = WKWebViewConfiguration.alloc().init()
                 config.preferences().setJavaScriptEnabled_(True)
                 config.setMediaTypesRequiringUserActionForPlayback_(0)  # autoplay
