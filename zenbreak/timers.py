@@ -27,7 +27,7 @@ class ReminderEngine:
         level_2_delay: int = 30,
         level_3_delay: int = 60,
         level_4_delay: int = 90,
-        cooldown_sec: int = 120,
+        cooldown_sec: int = 1800,  # 30 minutes minimum between breaks
     ):
         self.strain_threshold = strain_threshold
         self.level_2_delay = level_2_delay
