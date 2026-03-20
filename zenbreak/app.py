@@ -269,14 +269,16 @@ class ZenBreakApp(rumps.App):
         # Peek without advancing the rotation
         self.exercises._index[top_area] -= 1
 
-        if top_strain >= threshold:
-            self.next_break_item.title = f"Now: {next_exercise.name} ({top_area.value})"
+        # Check if in cooldown (just took a break)
+        if self.engine._cooldown_until > time.time():
+            cooldown_left = int((self.engine._cooldown_until - time.time()) / 60)
+            self.next_break_item.title = f"Next: {next_exercise.name} in {cooldown_left}m"
         elif top_strain > 2:
-            remaining_pct = threshold - top_strain
+            remaining_pct = max(0, threshold - top_strain)
             est_min = max(1, int(remaining_pct / 1.0))
-            self.next_break_item.title = f"In {est_min} min: {next_exercise.name} ({top_area.value})"
+            self.next_break_item.title = f"Next: {next_exercise.name} in {est_min}m"
         else:
-            self.next_break_item.title = f"In ~30 min: {next_exercise.name} ({top_area.value})"
+            self.next_break_item.title = f"Next: {next_exercise.name} in ~30m"
 
         # Stats + streak
         taken = self.stats.breaks_taken
