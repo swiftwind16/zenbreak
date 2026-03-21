@@ -230,13 +230,20 @@ class OverlayManager(NSObject):
 
     @objc.python_method
     def dismiss(self):
-        """Hide the overlay and invoke callback."""
+        """Hide the overlay, stop any playing video, and invoke callback."""
         self._dismiss_requested = True
         if self._event_monitor is not None:
             from AppKit import NSEvent
             NSEvent.removeMonitor_(self._event_monitor)
             self._event_monitor = None
         if self._window is not None:
+            # Stop any WKWebView video by loading blank page
+            content = self._window.contentView()
+            if content:
+                for subview in content.subviews():
+                    from WebKit import WKWebView
+                    if isinstance(subview, WKWebView):
+                        subview.loadHTMLString_baseURL_("", None)
             self._window.orderOut_(None)
             self._window = None
         if self._on_dismiss is not None:
