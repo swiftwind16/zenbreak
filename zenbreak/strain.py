@@ -13,53 +13,56 @@ class BodyArea(Enum):
 
 # Strain points per 5-second snapshot, by activity category
 STRAIN_RULES: dict[str, dict[BodyArea, float]] = {
+    # Rates tuned so highest area hits 50% in ~30 min of active use.
+    # Net rate = rate - decay(0.03). At 12 ticks/min:
+    #   0.17 net => (0.17-0.03)*12 = 1.68%/min => 50% in ~30 min
     "terminal": {
-        BodyArea.EYES: 0.09,
-        BodyArea.NECK: 0.07,
-        BodyArea.WRISTS: 0.06,
-        BodyArea.SHOULDERS: 0.04,
-        BodyArea.BACK: 0.03,
-        BodyArea.CIRCULATION: 0.02,
+        BodyArea.EYES: 0.17,
+        BodyArea.NECK: 0.14,
+        BodyArea.WRISTS: 0.12,
+        BodyArea.SHOULDERS: 0.08,
+        BodyArea.BACK: 0.07,
+        BodyArea.CIRCULATION: 0.05,
     },
     "ide": {
-        BodyArea.EYES: 0.08,
-        BodyArea.NECK: 0.05,
-        BodyArea.WRISTS: 0.07,
-        BodyArea.SHOULDERS: 0.04,
-        BodyArea.BACK: 0.03,
-        BodyArea.CIRCULATION: 0.02,
+        BodyArea.EYES: 0.16,
+        BodyArea.NECK: 0.10,
+        BodyArea.WRISTS: 0.14,
+        BodyArea.SHOULDERS: 0.09,
+        BodyArea.BACK: 0.07,
+        BodyArea.CIRCULATION: 0.05,
     },
     "browser": {
-        BodyArea.EYES: 0.07,
-        BodyArea.NECK: 0.04,
-        BodyArea.WRISTS: 0.03,
-        BodyArea.SHOULDERS: 0.02,
-        BodyArea.BACK: 0.03,
-        BodyArea.CIRCULATION: 0.02,
+        BodyArea.EYES: 0.14,
+        BodyArea.NECK: 0.08,
+        BodyArea.WRISTS: 0.06,
+        BodyArea.SHOULDERS: 0.05,
+        BodyArea.BACK: 0.07,
+        BodyArea.CIRCULATION: 0.05,
     },
     "video_call": {
-        BodyArea.EYES: 0.06,
-        BodyArea.NECK: 0.07,
-        BodyArea.WRISTS: 0.01,
-        BodyArea.SHOULDERS: 0.05,
+        BodyArea.EYES: 0.12,
+        BodyArea.NECK: 0.14,
+        BodyArea.WRISTS: 0.04,
+        BodyArea.SHOULDERS: 0.10,
+        BodyArea.BACK: 0.08,
+        BodyArea.CIRCULATION: 0.07,
+    },
+    "messaging": {
+        BodyArea.EYES: 0.08,
+        BodyArea.NECK: 0.05,
+        BodyArea.WRISTS: 0.05,
+        BodyArea.SHOULDERS: 0.04,
         BodyArea.BACK: 0.04,
         BodyArea.CIRCULATION: 0.04,
     },
-    "messaging": {
-        BodyArea.EYES: 0.04,
-        BodyArea.NECK: 0.02,
-        BodyArea.WRISTS: 0.02,
-        BodyArea.SHOULDERS: 0.02,
-        BodyArea.BACK: 0.02,
-        BodyArea.CIRCULATION: 0.02,
-    },
     "other": {
-        BodyArea.EYES: 0.05,
-        BodyArea.NECK: 0.03,
-        BodyArea.WRISTS: 0.02,
-        BodyArea.SHOULDERS: 0.02,
-        BodyArea.BACK: 0.02,
-        BodyArea.CIRCULATION: 0.02,
+        BodyArea.EYES: 0.10,
+        BodyArea.NECK: 0.06,
+        BodyArea.WRISTS: 0.05,
+        BodyArea.SHOULDERS: 0.05,
+        BodyArea.BACK: 0.05,
+        BodyArea.CIRCULATION: 0.04,
     },
 }
 
@@ -80,43 +83,11 @@ BREAK_RECOVERY = {
 }
 
 
-import json
-import time
-from pathlib import Path
-
-_STRAIN_PATH = Path.home() / ".zenbreak" / "strain.json"
-
-
 class StrainTracker:
     def __init__(self, persist=True):
         self._strain: dict[BodyArea, float] = {area: 0.0 for area in BodyArea}
-        self._persist = persist
-        if persist:
-            self._load()
-
-    def _load(self):
-        """Load persisted strain if recent (< 10 min old)."""
-        if _STRAIN_PATH.exists():
-            try:
-                with open(_STRAIN_PATH) as f:
-                    data = json.load(f)
-                saved_time = data.get("timestamp", 0)
-                if time.time() - saved_time < 600:  # less than 10 min ago
-                    for area in BodyArea:
-                        if area.value in data.get("strain", {}):
-                            self._strain[area] = data["strain"][area.value]
-            except (json.JSONDecodeError, KeyError):
-                pass
-
-    def _save(self):
-        """Persist strain to disk."""
-        _STRAIN_PATH.parent.mkdir(parents=True, exist_ok=True)
-        data = {
-            "timestamp": time.time(),
-            "strain": {area.value: val for area, val in self._strain.items()},
-        }
-        with open(_STRAIN_PATH, "w") as f:
-            json.dump(data, f)
+        # Always starts at 0 — strain is session-based
+        # This prevents "break in 1m" on startup from stale data
 
     def update(self, snapshot: ActivitySnapshot):
         """Update strain levels based on a new activity snapshot."""
@@ -128,28 +99,25 @@ class StrainTracker:
             rate = base_rate
             if area in (BodyArea.WRISTS, BodyArea.SHOULDERS):
                 rate *= kb_mult
-            # Natural decay: strain slowly decreases (-0.02 per tick)
-            # Net effect: strain still rises during activity but has a cap
-            decay = 0.02
+            # Natural decay keeps strain from maxing out permanently
+            # Strain plateaus around 60-70% for the highest areas
+            decay = 0.03
             new_val = self._strain[area] + rate - decay
             self._strain[area] = max(0.0, min(100.0, new_val))
-        if self._persist:
-            self._save()
 
     def record_break(self, area: BodyArea, duration_sec: int):
-        """Reduce strain for a body area after a break."""
-        recovery = BREAK_RECOVERY.get(area, 1.0) * duration_sec / 10
-        self._strain[area] = max(0.0, self._strain[area] - recovery)
-        if self._persist:
-            self._save()
+        """Reduce strain for the target area fully, and all other areas by 30%."""
+        # Target area: full recovery
+        self._strain[area] = 0.0
+        # All other areas: reduce by 30% (you moved, shifted position)
+        for other in BodyArea:
+            if other != area:
+                self._strain[other] *= 0.7
 
     def record_full_break(self, duration_sec: int):
-        """Reduce strain for ALL areas (e.g., walking break)."""
+        """Reduce strain for ALL areas (e.g., idle, walking break)."""
         for area in BodyArea:
-            recovery = BREAK_RECOVERY.get(area, 1.0) * duration_sec / 10
-            self._strain[area] = max(0.0, self._strain[area] - recovery)
-        if self._persist:
-            self._save()
+            self._strain[area] *= 0.5
 
     def get_strain(self) -> dict[BodyArea, float]:
         return dict(self._strain)
