@@ -16,7 +16,19 @@ from zenbreak.stats import StatsTracker
 from zenbreak.gamification import GameEngine
 
 
-_ICON_PATH = str(Path(__file__).parent.parent / "assets" / "menubar-icon.png")
+def _find_icon() -> str:
+    """Find menu bar icon — works both in dev and packaged app."""
+    # Dev: zenbreak/app.py → ../assets/menubar-icon.png
+    dev_path = Path(__file__).parent.parent / "assets" / "menubar-icon.png"
+    if dev_path.exists():
+        return str(dev_path)
+    # Packaged: inside .app bundle Resources
+    bundle_path = Path(__file__).parent / "assets" / "menubar-icon.png"
+    if bundle_path.exists():
+        return str(bundle_path)
+    return ""
+
+_ICON_PATH = _find_icon()
 
 
 class ZenBreakApp(rumps.App):
