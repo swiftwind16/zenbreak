@@ -96,6 +96,7 @@ class ZenBreakApp(rumps.App):
             self.challenge_item,
             None,
             self._build_break_menu(),
+            self._build_health_focus_menu(),
             pause_menu,
             None,
             rumps.MenuItem("Quit ZenBreak", callback=rumps.quit_application),
@@ -304,6 +305,51 @@ class ZenBreakApp(rumps.App):
         rank_line, challenge_line = self.game.get_menu_summary()
         self.rank_item.title = rank_line
         self.challenge_item.title = challenge_line
+
+    def _build_health_focus_menu(self):
+        """Build 'My health focus' submenu with toggleable body areas."""
+        menu = rumps.MenuItem("My health focus")
+
+        # Load saved focus from config
+        saved_focus = self.config.get("health_focus", [])
+        focus_set = {BodyArea(a) for a in saved_focus if a in [b.value for b in BodyArea]}
+        self.strain.set_health_focus(focus_set)
+
+        for area in BodyArea:
+            item = rumps.MenuItem(
+                area.value.capitalize(),
+                callback=lambda sender, a=area: self._toggle_health_focus(sender, a),
+            )
+            item.state = 1 if area in focus_set else 0
+            menu.add(item)
+        return menu
+
+    def _toggle_health_focus(self, sender, area: BodyArea):
+        """Toggle a body area's health focus on/off."""
+        sender.state = not sender.state
+
+        # Rebuild focus set from menu states
+        focus_set = set()
+        for a in BodyArea:
+            # Find the menu item by title
+            focus_menu = self.menu.get("My health focus")
+            if focus_menu:
+                item = focus_menu.get(a.value.capitalize())
+                if item and item.state:
+                    focus_set.add(a)
+
+        self.strain.set_health_focus(focus_set)
+
+        # Persist to config
+        import json
+        config_path = Path.home() / ".zenbreak" / "config.json"
+        config = {}
+        if config_path.exists():
+            with open(config_path) as f:
+                config = json.load(f)
+        config["health_focus"] = [a.value for a in focus_set]
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
 
     def _build_break_menu(self):
         """Build 'Take a break' submenu with all body areas."""

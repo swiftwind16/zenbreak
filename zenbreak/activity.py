@@ -50,6 +50,15 @@ APP_CATEGORIES: Dict[str, str] = {
 }
 
 
+def get_app_category(app_name: str, bundle_id: str) -> str:
+    """Get category for an app. Uses hardcoded map first, then AI classifier."""
+    if bundle_id in APP_CATEGORIES:
+        return APP_CATEGORIES[bundle_id]
+    # AI classification for unknown apps
+    from zenbreak.app_classifier import classify_app
+    return classify_app(app_name, bundle_id)
+
+
 class InputIntensity(enum.Enum):
     """Classifies input event rate into intensity levels."""
 
@@ -96,7 +105,7 @@ class ActivitySnapshot:
 
     @property
     def app_category(self) -> str:
-        return APP_CATEGORIES.get(self.bundle_id, "other")
+        return get_app_category(self.app_name, self.bundle_id)
 
 
 @dataclass
@@ -177,7 +186,7 @@ class ActivityMonitor:
                 AppSessionSummary(
                     app_name=snaps[0].app_name,
                     bundle_id=bundle_id,
-                    category=APP_CATEGORIES.get(bundle_id, "other"),
+                    category=get_app_category(snaps[0].app_name, bundle_id),
                     total_duration_seconds=total_duration,
                     avg_keyboard_intensity=InputIntensity.from_events_per_minute(avg_kb).value,
                     avg_mouse_intensity=InputIntensity.from_events_per_minute(avg_ms).value,

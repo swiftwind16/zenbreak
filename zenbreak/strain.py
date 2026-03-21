@@ -1,5 +1,5 @@
 from enum import Enum
-from zenbreak.activity import ActivitySnapshot, InputIntensity, APP_CATEGORIES
+from zenbreak.activity import ActivitySnapshot, InputIntensity, get_app_category
 
 
 class BodyArea(Enum):
@@ -56,6 +56,22 @@ STRAIN_RULES: dict[str, dict[BodyArea, float]] = {
         BodyArea.BACK: 0.04,
         BodyArea.CIRCULATION: 0.04,
     },
+    "design": {  # Figma, Sketch, etc — high eye/mouse strain
+        BodyArea.EYES: 0.15,
+        BodyArea.NECK: 0.08,
+        BodyArea.WRISTS: 0.08,
+        BodyArea.SHOULDERS: 0.06,
+        BodyArea.BACK: 0.06,
+        BodyArea.CIRCULATION: 0.05,
+    },
+    "reading": {  # PDF readers, Kindle, etc
+        BodyArea.EYES: 0.14,
+        BodyArea.NECK: 0.07,
+        BodyArea.WRISTS: 0.03,
+        BodyArea.SHOULDERS: 0.04,
+        BodyArea.BACK: 0.05,
+        BodyArea.CIRCULATION: 0.04,
+    },
     "other": {
         BodyArea.EYES: 0.10,
         BodyArea.NECK: 0.06,
@@ -86,12 +102,16 @@ BREAK_RECOVERY = {
 class StrainTracker:
     def __init__(self, persist=True):
         self._strain: dict[BodyArea, float] = {area: 0.0 for area in BodyArea}
+        self._health_focus: set[BodyArea] = set()
         # Always starts at 0 — strain is session-based
-        # This prevents "break in 1m" on startup from stale data
+
+    def set_health_focus(self, areas: set[BodyArea]):
+        """Set which body areas to prioritize (1.5x strain multiplier)."""
+        self._health_focus = areas
 
     def update(self, snapshot: ActivitySnapshot):
         """Update strain levels based on a new activity snapshot."""
-        category = APP_CATEGORIES.get(snapshot.bundle_id, "other")
+        category = get_app_category(snapshot.app_name, snapshot.bundle_id)
         rules = STRAIN_RULES.get(category, STRAIN_RULES["other"])
         kb_mult = KEYBOARD_MULTIPLIER.get(snapshot.keyboard_intensity, 1.0)
 
@@ -99,6 +119,9 @@ class StrainTracker:
             rate = base_rate
             if area in (BodyArea.WRISTS, BodyArea.SHOULDERS):
                 rate *= kb_mult
+            # Health focus: prioritized areas accumulate 1.5x faster
+            if area in self._health_focus:
+                rate *= 1.5
             # Natural decay keeps strain from maxing out permanently
             # Strain plateaus around 60-70% for the highest areas
             decay = 0.03
